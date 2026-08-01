@@ -1,0 +1,1488 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vuelta">
+<meta name="theme-color" content="#14432E">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<title>Vuelta · Tarjeta y seguimiento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --turf:#14432E; --fairway:#2E6B49; --sage:#E7EDE4; --paper:#FFFFFF;
+    --ink:#1C1C1A; --pencil:#8A8F86; --flag:#C8402F; --sand:#E4D2A8;
+    --line:#D5DBD0; --shadow:0 1px 2px rgba(20,67,46,.06),0 8px 30px rgba(20,67,46,.10);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:"IBM Plex Mono",monospace;
+    background:radial-gradient(120% 80% at 50% -10%, #EEF3EA 0%, var(--sage) 55%, #DDE4D8 100%);
+    color:var(--ink); min-height:100vh; padding:18px 14px 40px; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  .masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:2px 4px 18px}
+  .masthead h1{font-family:"Caveat",cursive;font-weight:700;font-size:clamp(34px,6vw,52px);
+    line-height:.9;margin:0;color:var(--turf)}
+  .masthead .sub{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;
+    text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--fairway)}
+  .meta{display:flex;gap:10px;margin-left:auto;flex-wrap:wrap;align-items:flex-end}
+  .meta label{display:flex;flex-direction:column;font-family:"Barlow Semi Condensed",sans-serif;
+    font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--pencil);gap:3px}
+  .meta input,.meta select{
+    font-family:"Caveat",cursive;font-size:20px;color:var(--ink);
+    border:none;border-bottom:1.5px solid var(--line);background:transparent;
+    padding:1px 4px 3px;min-width:120px;-webkit-appearance:none;appearance:none;cursor:pointer;
+  }
+  .meta select{background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%232E6B49'/%3E%3C/svg%3E") no-repeat right 2px center;padding-right:16px}
+  .meta input:focus,.meta select:focus{outline:none;border-bottom-color:var(--flag)}
+
+  .spread{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  .page{background:var(--paper);border-radius:14px;box-shadow:var(--shadow);
+    padding:16px 16px 18px;position:relative;overflow:hidden}
+  .page-title{font-family:"Caveat",cursive;font-weight:700;font-size:26px;color:var(--turf);
+    display:flex;align-items:center;gap:8px;margin:0 0 10px 2px}
+  .page-title::after{content:"";flex:1;height:1.5px;background:var(--line)}
+
+  /* franja info del campo */
+  .courseinfo{display:none;gap:6px;flex-wrap:wrap;margin:-4px 2px 12px}
+  .courseinfo.show{display:flex}
+  .courseinfo .chip{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;font-size:11px;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--turf);background:var(--sage);
+    border-radius:20px;padding:4px 10px}
+  .courseinfo .chip b{font-family:"IBM Plex Mono",monospace;font-weight:600;margin-left:4px}
+  .courseinfo .pend{background:#FBEEE9;color:var(--flag)}
+  .manual-save{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin:-2px 2px 12px}
+  .manual-save.show{display:flex}
+  #manualNombre{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink);
+    border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;min-width:180px;flex:1}
+  #manualNombre:focus{outline:none;border-color:var(--fairway)}
+  #manualGuardar{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;font-size:11px;color:#fff;background:var(--turf);border:none;
+    border-radius:20px;padding:7px 14px;cursor:pointer}
+  #manualGuardar:hover{background:var(--fairway)}
+  #manualMsg{font-family:"IBM Plex Mono",monospace;font-size:12px}
+  #manualMsg.ok{color:var(--fairway)} #manualMsg.err{color:var(--flag)}
+
+  table{border-collapse:collapse;width:100%;table-layout:fixed}
+  thead th{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;font-size:11px;
+    letter-spacing:.04em;text-transform:uppercase;color:var(--fairway);padding:4px 0 8px;
+    border-bottom:2px solid var(--turf)}
+  th.wide{width:14%} th.tiny{width:9%}
+  tbody td{border-bottom:1px solid var(--line);height:34px;text-align:center;padding:0}
+  tbody tr:nth-child(odd) td{background:#FBFCFA}
+  .hno{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;color:var(--turf);font-size:15px}
+  td input{width:100%;height:100%;border:none;background:transparent;text-align:center;
+    font-family:"IBM Plex Mono",monospace;font-size:14px;color:var(--ink);padding:0}
+  td input::placeholder{color:#C7CEC2}
+  td input:focus{outline:none;background:#FFF7E9;box-shadow:inset 0 0 0 1.5px var(--flag)}
+  td input.filled{color:var(--turf);font-weight:500}
+  .golpes-sel{width:100%;height:34px;border:none;background:transparent;
+    font-family:"IBM Plex Mono",monospace;font-size:15px;color:var(--turf);font-weight:600;
+    -webkit-appearance:none;appearance:none;cursor:pointer;text-align:center;text-align-last:center}
+  .golpes-sel:focus{outline:none;background:#FFF7E9}
+  tr.hide,.hide{display:none!important}
+  .tick{display:block;width:100%;height:34px;line-height:34px;cursor:pointer;
+    font-family:"Caveat",cursive;font-size:22px;color:transparent;
+    user-select:none;-webkit-tap-highlight-color:transparent;transition:color .12s}
+  .tick.on{color:var(--fairway)}
+  .tick:not(.on):not(.off-na)::after{content:"·";color:#CBD3C6}
+  .tick.off-na{color:transparent;cursor:default;background:repeating-linear-gradient(
+      45deg,transparent,transparent 5px,#F0F2EE 5px,#F0F2EE 6px)}
+  .sum td{border-top:2px solid var(--turf);border-bottom:none;height:30px;
+    font-weight:600;color:var(--turf);font-size:13px}
+  .sum .lab{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.1em;font-size:11px}
+  .grand td{border-top:1px solid var(--line)}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+  .stat{background:var(--sage);border-radius:10px;padding:9px 8px;text-align:center}
+  .stat .v{font-family:"Caveat",cursive;font-weight:700;font-size:28px;line-height:1;color:var(--turf)}
+  .stat .v small{font-size:15px}
+  .stat .k{font-family:"Barlow Semi Condensed",sans-serif;font-size:10px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--fairway);margin-top:3px}
+  .stat.hl{background:var(--turf)} .stat.hl .v{color:#fff} .stat.hl .k{color:#BFD8C7}
+
+  .whs{margin-top:12px;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px}
+  .whs-head{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.12em;font-size:12px;color:var(--turf);margin-bottom:8px;display:flex;gap:8px;align-items:center}
+  .whs-mode{font-weight:600;letter-spacing:.06em;color:var(--fairway);background:var(--sage);
+    border-radius:20px;padding:2px 8px;font-size:10px}
+  .whs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:8px}
+  .whs-cell{display:flex;flex-direction:column;gap:3px;text-align:center}
+  .whs-cell span{font-family:"Barlow Semi Condensed",sans-serif;font-size:9px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--pencil)}
+  .whs-cell b{font-family:"Caveat",cursive;font-size:26px;line-height:1;color:var(--turf)}
+  .whs-cell input{font-family:"IBM Plex Mono",monospace;font-size:14px;text-align:center;color:var(--ink);
+    border:1.5px solid var(--line);border-radius:8px;padding:5px 2px;width:100%}
+  .whs-cell input:focus{outline:none;border-color:var(--fairway);background:#FFF7E9}
+  .whs-cell.res b{color:var(--flag)}
+  .whs-cell.res2 b{color:var(--fairway)}
+  @media(max-width:820px){.whs-cell b{font-size:22px} .whs-cell input{font-size:13px}}
+
+  .tracker-block{margin-bottom:14px}
+  .hole-bar{display:flex;align-items:center;justify-content:center;gap:14px;margin:0 0 12px}
+  .hole-lab{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;text-transform:uppercase;
+    letter-spacing:.1em;font-size:12px;color:var(--fairway)}
+  .hole-lab b{font-family:"Caveat",cursive;font-size:26px;color:var(--turf);margin:0 2px}
+  .hole-btn{font-size:16px;width:40px;height:40px;border:1.5px solid var(--line);border-radius:50%;
+    background:var(--paper);color:var(--turf);cursor:pointer}
+  .hole-btn:hover{border-color:var(--fairway);color:var(--fairway)}
+  .new-round{margin-left:6px;font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;
+    text-transform:uppercase;letter-spacing:.06em;font-size:10px;color:var(--pencil);
+    background:transparent;border:1px solid var(--line);border-radius:20px;padding:6px 10px;cursor:pointer}
+  .new-round:hover{color:var(--flag);border-color:var(--flag)}
+  .new-round.arm{color:#fff;background:var(--flag);border-color:var(--flag)}
+  .shot-types{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;margin:-4px 0 12px}
+  .shot-types>span{font-family:"Barlow Semi Condensed",sans-serif;font-size:10px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--pencil);margin-right:2px}
+  .st{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;font-size:11px;letter-spacing:.04em;
+    color:var(--c);background:var(--paper);border:1.5px solid var(--c);border-radius:20px;padding:4px 12px;cursor:pointer}
+  .st.on{background:var(--c);color:#fff}
+  .tb-head{display:flex;align-items:center;gap:10px;margin:0 2px 6px}
+  .tb-head h3{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.14em;font-size:12px;color:var(--fairway);margin:0}
+  .tb-head .cnt{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--pencil)}
+  .tb-head button{margin-left:auto;font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em;font-size:10px;color:var(--pencil);
+    background:transparent;border:1px solid var(--line);border-radius:20px;padding:3px 10px;cursor:pointer}
+  .tb-head button:hover{color:var(--flag);border-color:var(--flag)}
+  .palette{display:flex;gap:6px;margin:0 2px 6px}
+  .pal{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;text-transform:uppercase;
+    letter-spacing:.06em;font-size:11px;color:var(--fairway);background:var(--paper);
+    border:1.5px solid var(--line);border-radius:20px;padding:5px 12px;cursor:pointer}
+  .pal.on{background:var(--turf);color:#fff;border-color:var(--turf)}
+  .obj-bunker,.obj-water,.obj-arbol{cursor:pointer}
+  .green-meters{display:flex;align-items:center;gap:6px;justify-content:center;flex-wrap:wrap;margin:2px 0 6px;
+    font-family:"Barlow Semi Condensed",sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--fairway)}
+  #greenMeters{font-family:"IBM Plex Mono",monospace;font-size:13px;text-align:center;width:64px;
+    border:1.5px solid var(--line);border-radius:8px;padding:4px}
+  #greenMeters:focus{outline:none;border-color:var(--fairway);background:#FFF7E9}
+  .gm-hint{text-transform:none;letter-spacing:0;color:var(--pencil);font-size:10px}
+  .mlab{font-family:"IBM Plex Mono",monospace;font-size:9px;fill:#2b2b28;font-weight:600}
+  .obj-sel{outline:none}
+  .sel-ring{fill:none;stroke:var(--flag);stroke-width:2;stroke-dasharray:5 4;pointer-events:none}
+  .obj-ctrl{display:none;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+    z-index:50;background:var(--turf);border-radius:26px;padding:8px 12px;gap:8px;align-items:center;
+    box-shadow:0 6px 24px rgba(20,67,46,.35)}
+  .obj-ctrl.show{display:flex}
+  .obj-ctrl span{font-family:"Barlow Semi Condensed",sans-serif;font-weight:600;text-transform:uppercase;
+    letter-spacing:.1em;font-size:11px;color:#BFD8C7}
+  .obj-ctrl button{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;font-size:15px;
+    min-width:38px;height:34px;border:none;border-radius:18px;background:#fff;color:var(--turf);cursor:pointer}
+  .obj-ctrl #objDel{background:var(--flag);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:0 12px}
+  .obj-ctrl #objDone{background:var(--fairway);color:#fff}
+  svg.field{width:100%;height:auto;display:block;border-radius:12px;background:#F4F7F1;
+    touch-action:manipulation;cursor:crosshair}
+  .mark{font-family:"Caveat",cursive;font-weight:700;font-size:26px;fill:var(--flag);cursor:pointer;pointer-events:auto}
+  .hint{font-family:"Caveat",cursive;font-size:19px;fill:var(--pencil);pointer-events:none}
+
+  .foot{font-family:"Barlow Semi Condensed",sans-serif;font-size:11px;letter-spacing:.06em;
+    color:var(--pencil);text-align:center;margin-top:22px}
+
+  .import{max-width:640px;margin:22px auto 0;background:var(--paper);border-radius:12px;
+    box-shadow:var(--shadow);padding:12px 16px}
+  .import summary{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.12em;font-size:12px;color:var(--turf);cursor:pointer}
+  .import-help{font-family:"Barlow Semi Condensed",sans-serif;font-size:12px;color:var(--pencil);
+    line-height:1.4;margin:10px 0}
+  .import-help code{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--fairway);background:var(--sage);padding:1px 4px;border-radius:4px}
+  #jsonIn{width:100%;min-height:110px;font-family:"IBM Plex Mono",monospace;font-size:12px;
+    color:var(--ink);border:1.5px solid var(--line);border-radius:8px;padding:8px;resize:vertical}
+  #jsonIn:focus{outline:none;border-color:var(--fairway)}
+  .import-actions{display:flex;align-items:center;gap:12px;margin-top:8px}
+  #jsonLoad{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;font-size:12px;color:#fff;background:var(--turf);border:none;
+    border-radius:20px;padding:8px 18px;cursor:pointer}
+  #jsonLoad:hover{background:var(--fairway)}
+  .xlsx-btn{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;font-size:12px;color:var(--turf);background:var(--sage);
+    border-radius:20px;padding:8px 18px;cursor:pointer}
+  .xlsx-btn:hover{background:#DCE5D6}
+  #jsonMsg{font-family:"IBM Plex Mono",monospace;font-size:12px}
+  #jsonMsg.ok{color:var(--fairway)} #jsonMsg.err{color:var(--flag)}
+
+  @media(max-width:820px){.spread{grid-template-columns:1fr}.meta{margin-left:0;width:100%}
+    body{padding:14px 10px 34px}}
+  @media(prefers-reduced-motion:reduce){.mark{animation:none}}
+
+  .print-btn{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;font-size:12px;color:#fff;background:var(--flag);border:none;border-radius:20px;
+    padding:8px 16px;cursor:pointer;align-self:flex-end}
+  .print-btn:hover{filter:brightness(1.08)}
+
+  /* ── Tarjeta imprimible (tamaño tarjeta de golf doblada) ── */
+  .print-overlay{display:none;position:fixed;inset:0;z-index:200;background:#fff;overflow:auto;padding:16px}
+  .print-overlay.show{display:block}
+  .disp-overlay{display:none;position:fixed;inset:0;z-index:200;background:var(--paper);overflow:auto;padding:16px}
+  .disp-overlay.show{display:block}
+  .disp-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;max-width:480px;margin:0 auto 10px}
+  .disp-title{font-family:"Caveat",cursive;font-weight:700;font-size:26px;color:var(--turf)}
+  #dispClose{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;font-size:12px;background:var(--sage);color:var(--turf);border:none;border-radius:22px;padding:9px 18px;cursor:pointer}
+  .disp-body{max-width:480px;margin:0 auto;text-align:center}
+  .disp-legend{font-family:"Barlow Semi Condensed",sans-serif;font-size:12px;margin-bottom:8px}
+  .disp-body svg{width:min(94vw,460px);height:auto;border:1.5px solid var(--line);border-radius:12px;margin:8px auto;display:block;background:#F4F7F1}
+  .hist-btn{background:var(--fairway)!important}
+  .hist-body{max-width:560px;margin:0 auto}
+  .hist-card{border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;position:relative}
+  .hist-card .hc-top{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;color:var(--turf);font-size:14px}
+  .hist-card .hc-sub{font-family:"Barlow Semi Condensed",sans-serif;font-size:11px;color:var(--pencil);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .hist-card .hc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(60px,1fr));gap:6px}
+  .hist-card .hc-cell{text-align:center;background:var(--sage);border-radius:8px;padding:5px 3px}
+  .hist-card .hc-cell b{display:block;font-family:"Caveat",cursive;font-size:22px;color:var(--turf);line-height:1}
+  .hist-card .hc-cell span{font-family:"Barlow Semi Condensed",sans-serif;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--fairway)}
+  .hist-del{position:absolute;top:8px;right:8px;border:none;background:transparent;color:var(--pencil);font-size:18px;cursor:pointer}
+  .hist-del:hover{color:var(--flag)}
+  .hist-empty{text-align:center;color:var(--pencil);font-family:"Barlow Semi Condensed",sans-serif;padding:30px 0}
+  .print-toolbar{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
+  .print-toolbar button{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;font-size:13px;border:none;border-radius:22px;padding:10px 20px;cursor:pointer}
+  #printDo{background:var(--turf);color:#fff} #printClose{background:var(--sage);color:var(--turf)}
+  .pm{background:var(--paper);color:var(--turf);border:1.5px solid var(--turf)!important}
+  .pm.on{background:var(--turf);color:#fff}
+  .printcard{display:block;width:90mm;max-width:100%;margin:0 auto;color:#000;
+    font-family:Arial,Helvetica,sans-serif}
+  .pc-head{display:flex;flex-direction:column;gap:3px;margin-bottom:4mm}
+  .pc-title{font-weight:700;font-size:13pt}
+  .pc-meta{font-size:8.5pt;line-height:1.6}
+  .pc-table{width:100%;border-collapse:collapse;font-size:8.5pt}
+  .pc-table th,.pc-table td{border:.5pt solid #000;text-align:center;height:6mm;padding:0 .5mm}
+  .pc-table th{background:#eee;font-size:7.5pt}
+  .pc-sum td{font-weight:700;background:#f4f4f4}
+  .pc-face2{margin-top:22px;padding-top:16px;border-top:2px dashed #bbb;text-align:center}
+  .pc-diag-big{display:flex;flex-direction:column;gap:6mm;align-items:center;margin-top:4mm}
+  .pc-diag-big svg{border:.5pt solid #999;border-radius:2mm;max-width:100%}
+  .pc-note{font-size:8pt;color:#555;margin-top:3mm;text-align:center}
+  @media print{
+    .wrap,.obj-ctrl,.print-toolbar{display:none!important}
+    .print-overlay{display:block!important;position:static;padding:0;overflow:visible}
+    .pc-face2{border-top:none;margin-top:0;padding-top:0;break-before:page;page-break-before:always}
+    @page{margin:8mm}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <h1>Vuelta</h1>
+    <span class="sub">Tarjeta&nbsp;·&nbsp;Seguimiento</span>
+    <div class="meta">
+      <label>Campo
+        <select id="campoSel"><option value="">— elegir —</option></select>
+      </label>
+      <label>Barra
+        <select id="barraSel"><option value="">—</option></select>
+      </label>
+      <label>Hoyos
+        <select id="hoyosSel">
+          <option value="18">18 hoyos</option>
+          <option value="9a">9 · 1º recorrido</option>
+          <option value="9b">9 · 2º recorrido</option>
+        </select>
+      </label>
+      <label>Fecha<input type="text" id="fechaInput" placeholder="—"></label>
+      <button type="button" id="printBtn" class="print-btn">🖨 Tarjeta</button>
+      <button type="button" id="histBtn" class="print-btn hist-btn">Historial</button>
+    </div>
+  </header>
+
+  <div class="spread">
+
+    <!-- IZQUIERDA · TARJETA -->
+    <section class="page">
+      <h2 class="page-title">Tarjeta</h2>
+      <div class="courseinfo" id="courseInfo"></div>
+      <div class="manual-save" id="manualSave">
+        <input id="manualNombre" placeholder="Nombre del campo (modo manual)">
+        <button id="manualGuardar">Guardar campo</button>
+        <span id="manualMsg"></span>
+      </div>
+      <table id="card">
+        <thead>
+          <tr>
+            <th class="tiny">Hoyo</th><th class="tiny">Par</th><th class="wide">Metros</th>
+            <th class="tiny">Hcp</th><th class="tiny">Calle</th><th class="tiny">Green</th>
+            <th class="tiny">Putts</th><th class="tiny">Golpes</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="stats" id="stats">
+        <div class="stat hl"><div class="v" id="stGolpes">—</div><div class="k">Golpes</div></div>
+        <div class="stat"><div class="v" id="stPar">—</div><div class="k">vs Par</div></div>
+        <div class="stat"><div class="v" id="stCalles">—<small>%</small></div><div class="k">Calles</div></div>
+        <div class="stat"><div class="v" id="stGreens">—<small>%</small></div><div class="k">Greens</div></div>
+      </div>
+      <div class="whs" id="whsPanel">
+        <div class="whs-head">Nivel de Juego · WHS <span class="whs-mode" id="whsMode">18 hoyos</span></div>
+        <div class="whs-grid">
+          <div class="whs-cell"><span>Golpes (RBA)</span><b id="whsGolpes">—</b></div>
+          <label class="whs-cell"><span>Hcp exacto</span><input id="whsHcp" inputmode="decimal" placeholder="—"></label>
+          <label class="whs-cell"><span>VC</span><input id="whsVC" inputmode="decimal" placeholder="—"></label>
+          <label class="whs-cell"><span>Slope</span><input id="whsSlope" inputmode="numeric" placeholder="—"></label>
+          <label class="whs-cell"><span>ASC</span><input id="whsASC" inputmode="decimal" value="0"></label>
+          <div class="whs-cell res"><span>Diferencial</span><b id="whsDiff">—</b></div>
+          <div class="whs-cell res2"><span>Hcp Juego</span><b id="whsHJ">—</b></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DERECHA · SEGUIMIENTO -->
+    <section class="page">
+      <h2 class="page-title">Seguimiento</h2>
+      <div class="hole-bar">
+        <button id="holePrev" class="hole-btn">◀</button>
+        <span class="hole-lab">Hoyo <b id="holeNum">1</b></span>
+        <button id="holeNext" class="hole-btn">▶</button>
+        <button id="newRound" class="new-round">Nueva ronda</button>
+        <button id="dispBtn" class="new-round">Dispersión</button>
+        <button id="saveRound" class="new-round">Guardar ronda</button>
+        <button id="clearLayout" class="new-round">Borrar diseño</button>
+      </div>
+      <div class="shot-types" id="shotTypesGreen"><span>Tipo de golpe:</span></div>
+
+      <div class="tracker-block">
+        <div class="tb-head"><h3>Approach · Green</h3>
+          <span class="cnt" id="cntGreen">0 marcas</span>
+          <button data-clear="green">Borrar</button></div>
+        <div class="palette" id="greenPalette">
+          <button class="pal on" data-tool="golpe">✕ Golpe</button>
+          <button class="pal" data-tool="bunker">Bunker</button>
+          <button class="pal" data-tool="agua">Agua</button>
+          <button class="pal" data-tool="arbol">Árbol</button>
+          <button class="pal" data-tool="bandera">Bandera</button>
+        </div>
+        <div class="green-meters"><label>Green fondo (m) <input id="greenDepth" inputmode="numeric" value="20"></label> · m a bandera <input id="greenMeters" inputmode="numeric" placeholder="auto"> <span class="gm-hint">(vacío = cuadrícula)</span></div>
+        <svg class="field" id="greenField" viewBox="0 0 400 300" data-zone="green">
+          <defs>
+            <radialGradient id="gr" cx="50%" cy="45%" r="60%">
+              <stop offset="0%" stop-color="#9FC7A6"/><stop offset="100%" stop-color="#7FAE88"/></radialGradient>
+            <pattern id="obhg" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="#F3E4E1"/><line x1="0" y1="0" x2="0" y2="8" stroke="#D68C7E" stroke-width="2"/></pattern>
+            <pattern id="grid1m" width="12" height="12" patternUnits="userSpaceOnUse">
+              <path d="M12 0 H0 V12" fill="none" stroke="#8FA98F" stroke-width="0.5" opacity="0.55"/></pattern>
+          </defs>
+          <rect x="0" y="0" width="400" height="300" fill="#EBF0E7"/>
+          <!-- fuera de límites al fondo -->
+          <rect x="0" y="0" width="400" height="20" fill="url(#obhg)"/>
+          <text x="200" y="14" text-anchor="middle" class="hint" font-size="10" fill="#B06A5C">fuera límites (fondo)</text>
+          <ellipse cx="215" cy="150" rx="150" ry="104" fill="#BBD6BE" opacity=".55"/>
+          <ellipse cx="215" cy="150" rx="112" ry="78" fill="url(#gr)" stroke="#6FA079" stroke-width="1.5"/>
+          <rect x="0" y="0" width="400" height="300" fill="url(#grid1m)" pointer-events="none"/>
+          <text x="8" y="294" class="hint" font-size="9">1 cuadro = 1 m</text>
+          <g id="greenFlag" data-x="215" data-y="150" transform="translate(215,150)">
+            <line x1="0" y1="0" x2="0" y2="-58" stroke="#3A3A34" stroke-width="2.5"/>
+            <path d="M0 -58 l26 8 -26 8z" fill="var(--flag)"/>
+            <circle r="3.2" fill="#3A3A34"/>
+          </g>
+          <text x="215" y="278" text-anchor="middle" class="hint">coloca bunker/agua/árbol y marca dónde cae</text>
+        </svg>
+      </div>
+
+      <div class="tracker-block">
+        <div class="tb-head"><h3>Drive · Calle</h3>
+          <span class="cnt" id="cntFair">0 marcas</span>
+          <button data-clear="fair">Borrar</button></div>
+        <div class="palette" id="fairPalette">
+          <button class="pal on" data-tool="golpe">✕ Golpe</button>
+          <button class="pal" data-tool="bunker">Bunker</button>
+          <button class="pal" data-tool="agua">Agua</button>
+          <button class="pal" data-tool="arbol">Árbol</button>
+        </div>
+        <div class="shot-types" id="shotTypesFair"><span>Tipo de golpe:</span></div>
+        <svg class="field" id="fairField" viewBox="0 0 400 300" data-zone="fair">
+          <defs>
+            <pattern id="hatch" width="9" height="9" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <line x1="0" y1="0" x2="0" y2="9" stroke="#CFDDC8" stroke-width="3"/></pattern>
+            <pattern id="obh" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="#F3E4E1"/><line x1="0" y1="0" x2="0" y2="8" stroke="#D68C7E" stroke-width="2"/></pattern>
+          </defs>
+          <!-- rough (base) -->
+          <rect x="0" y="0" width="400" height="300" fill="#A7BE9E"/>
+          <!-- fuera de límites: solo laterales -->
+          <rect x="0" y="0" width="18" height="300" fill="url(#obh)"/>
+          <rect x="382" y="0" width="18" height="300" fill="url(#obh)"/>
+          <text x="10" y="150" text-anchor="middle" class="hint" font-size="10" fill="#B06A5C" transform="rotate(-90 10 150)">fuera límites</text>
+          <text x="390" y="150" text-anchor="middle" class="hint" font-size="10" fill="#B06A5C" transform="rotate(90 390 150)">fuera límites</text>
+          <!-- rough oscuro (más ancho) a ambos lados de la calle -->
+          <rect x="98" y="20" width="40" height="276" fill="#77946D"/>
+          <rect x="262" y="20" width="40" height="276" fill="#77946D"/>
+          <!-- calle (más ancha) -->
+          <rect x="138" y="20" width="124" height="276" rx="26" fill="url(#hatch)" stroke="#B7CDAE" stroke-width="1.5"/>
+          <!-- líneas de distancia al green -->
+          <g stroke="#5E7A55" stroke-width="1.5" stroke-dasharray="7 5">
+            <line x1="144" y1="84" x2="188" y2="84"/>   <line x1="212" y1="84" x2="256" y2="84"/>
+            <line x1="144" y1="124" x2="188" y2="124"/> <line x1="212" y1="124" x2="256" y2="124"/>
+            <line x1="144" y1="164" x2="188" y2="164"/> <line x1="212" y1="164" x2="256" y2="164"/>
+            <line x1="144" y1="204" x2="188" y2="204"/> <line x1="212" y1="204" x2="256" y2="204"/>
+          </g>
+          <g fill="#3F5A38" font-size="12" font-weight="600" text-anchor="middle">
+            <text x="200" y="88">50 m</text><text x="200" y="128">100 m</text>
+            <text x="200" y="168">150 m</text><text x="200" y="208">200 m</text>
+          </g>
+          <!-- calle limpia: bunkers, agua y árboles los coloca el usuario con la paleta -->
+          <text x="200" y="34" text-anchor="middle" class="hint">green</text>
+          <text x="200" y="290" text-anchor="middle" class="hint">tee</text>
+        </svg>
+      </div>
+    </section>
+
+  </div>
+  <div class="obj-ctrl" id="objCtrl">
+    <span>Tamaño</span>
+    <button id="objMinus">−</button>
+    <button id="objPlus">＋</button>
+    <span>Girar</span>
+    <button id="objRotL">↺</button>
+    <button id="objRotR">↻</button>
+    <button id="objDel">Borrar</button>
+    <button id="objDone">✓</button>
+  </div>
+  <details class="import">
+    <summary>Importar campos (JSON)</summary>
+    <p class="import-help">Pega el JSON de uno o varios campos, <b>o</b> importa el Excel (misma plantilla). Se añaden al desplegable "Campo". Se guardan solo durante esta sesión.</p>
+    <textarea id="jsonIn" placeholder='{ "nombre":"El Saler", "valoracion":{"Amarillas":{"cr":72.0,"slope":132}}, "hoyos":[ {"par":4,"hcp":7,"metros":{"Amarillas":360}}, ... ] }'></textarea>
+    <div class="import-actions">
+      <button id="jsonLoad">Cargar JSON</button>
+      <label class="xlsx-btn">Excel (.xlsx)<input type="file" id="xlsxIn" accept=".xlsx" hidden></label>
+      <span id="jsonMsg"></span>
+    </div>
+  </details>
+  <p class="foot">Elige campo y barra para autocompletar · toca Calle/Green o una X para marcar · usa el botón «Tarjeta» para imprimir</p>
+</div>
+
+<div id="printOverlay" class="print-overlay">
+  <div class="print-toolbar">
+    <button id="pmClean" class="pm">En blanco</button>
+    <button id="pmFull" class="pm on">Con datos + dispersión</button>
+    <button id="printDo">Abrir para imprimir / PDF</button>
+    <button id="printClose">Cerrar</button>
+  </div>
+  <div id="printCard" class="printcard"></div>
+</div>
+<div id="dispOverlay" class="disp-overlay">
+  <div class="disp-bar">
+    <span class="disp-title">Dispersión · todos los hoyos</span>
+    <button id="dispClose">Cerrar</button>
+  </div>
+  <div id="dispBody" class="disp-body"></div>
+</div>
+<div id="histOverlay" class="disp-overlay">
+  <div class="disp-bar">
+    <span class="disp-title">Historial de rondas</span>
+    <button id="histClose">Cerrar</button>
+  </div>
+  <div id="histBody" class="hist-body"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ═══ Datos reales de campos (Comunidad Valenciana) ═══
+     Vistabella: valoración oficial 2023 (Par 72). par[] por hoyo confirmado.
+     metros[] por hoyo y hcp[] por hoyo = pendientes de tu tarjeta oficial. */
+  const COURSES = {
+    vistabella:{ nombre:'Vistabella Golf',
+      par:[4,3,5,4,5,4,3,4,4,5,3,4,4,5,3,4,4,4],
+      hcp:[15,17,11,13,3,1,9,7,5,2,6,18,12,4,8,16,14,10],
+      metrosHoyos:{
+        Blancas:[300,160,491,332,489,419,186,384,371,504,170,310,316,506,184,365,278,368],
+        Amarillas:[280,143,472,296,462,388,164,357,356,484,160,288,297,485,167,332,272,343],
+        Azules:[260,127,443,240,443,307,142,335,343,459,143,261,271,467,139,312,266,318],
+        Rojas:[235,109,398,204,402,274,119,309,325,438,125,236,254,441,118,239,255,290],
+      },
+      barras:{
+        Blancas:{metros:6133, cr:73.0, slope:144},
+        Amarillas:{metros:5746, cr:71.0, slope:141},
+        Azules:{metros:5276, cr:68.8, slope:136},
+        Rojas:{metros:4771, cr:66.3, slope:132},
+      }},
+    manises:{ nombre:'R.C.G. Manises (A+A)',
+      par:[4,5,4,3,5,5,3,4,3,4,5,4,3,5,5,3,4,3],
+      hcp:[9,15,3,13,5,11,17,1,7,10,16,4,14,6,12,18,2,8],
+      metrosHoyos:{
+        Blancas:[355,471,400,159,489,471,174,351,175,355,471,400,159,489,471,174,351,175],
+        Amarillas:[345,459,362,156,463,461,157,335,166,345,459,362,156,463,461,157,335,166],
+        Azules:[298,398,347,141,446,398,149,319,150,298,398,347,141,446,398,149,319,150],
+        Rojas:[294,383,303,133,440,387,141,311,131,294,383,303,133,440,387,141,311,131],
+      },
+      barras:{
+        Blancas:{metros:6090, cr:72.3, slope:142},
+        Amarillas:{metros:5808, cr:70.7, slope:138},
+        Azules:{metros:5292, cr:68.1, slope:125},
+        Rojas:{metros:5046, cr:66.7, slope:123},
+      }},
+    escorpion_nl:{ nombre:'Escorpión (Nuevos+Lagos)',
+      par:[5,4,5,3,5,4,4,3,4,4,4,3,4,3,5,4,3,5],
+      hcp:[15,5,13,17,9,1,3,11,7,6,10,18,4,16,14,12,8,2],
+      metrosHoyos:{
+        Doradas:[446,339,489,128,510,395,379,184,362,384,332,148,352,126,504,330,171,458],
+        Negras:[453,350,500,136,526,421,420,215,374,402,350,161,372,143,525,337,202,506],
+        Amarillas:[425,299,428,118,465,368,345,170,329,358,295,136,314,114,455,305,155,413],
+        Azules:[438,329,473,126,474,380,353,177,352,366,318,141,331,120,471,323,159,435],
+        Rojas:[387,253,383,94,430,318,301,143,287,318,283,110,275,97,409,270,128,356],
+      },
+      barras:{
+        Doradas:{metros:6037, cr:71.9, slope:134},
+        Negras:{metros:6393, cr:74.0, slope:136},
+        Amarillas:{metros:5492, cr:69.2, slope:126},
+        Azules:{metros:5766, cr:70.5, slope:130},
+        Rojas:{metros:4842, cr:66.0, slope:115},
+      }},
+    alenda:{ nombre:'Alenda Golf',
+      par:[5,4,3,4,3,4,4,4,5,4,4,5,3,5,4,3,4,4],
+      hcp:[4,12,8,14,18,2,16,6,10,15,11,3,9,7,13,17,1,5],
+      metrosHoyos:{
+        Blancas:[505,356,188,281,147,423,322,403,451,315,347,544,194,481,356,165,380,371],
+        Amarillas:[492,322,174,277,133,399,302,381,432,305,327,518,183,459,327,151,377,344],
+        Azules:[451,310,159,250,117,355,286,361,408,280,300,493,156,439,306,136,357,318],
+        Rojas:[435,298,152,229,98,345,268,342,375,260,276,443,136,430,284,127,350,284],
+      },
+      barras:{
+        Blancas:{metros:6229, cr:73.7, slope:137},
+        Amarillas:{metros:5903, cr:72.1, slope:133},
+        Azules:{metros:5482, cr:69.8, slope:129},
+        Rojas:{metros:5132, cr:68.1, slope:123},
+      }},
+    bonalba:{ nombre:'Bonalba Golf',
+      par:[4,5,4,3,5,4,4,3,4,4,3,4,5,3,5,4,4,4],
+      hcp:[5,9,17,15,11,7,1,13,3,18,12,2,4,16,14,6,8,10],
+      metrosHoyos:{
+        Blancas:[375,509,338,175,487,323,395,168,397,350,172,396,493,184,467,292,376,359],
+        Amarillas:[355,502,325,158,468,304,383,151,363,331,161,380,480,170,448,266,363,355],
+        Azules:[322,453,298,128,424,265,341,137,301,298,128,347,453,145,439,254,350,313],
+        Rojas:[312,448,282,125,418,263,331,126,292,296,128,330,439,142,424,237,338,298],
+      },
+      barras:{
+        Blancas:{metros:6256, cr:73.4, slope:138},
+        Amarillas:{metros:5963, cr:71.9, slope:134},
+        Azules:{metros:5396, cr:69.0, slope:123},
+        Rojas:{metros:5229, cr:68.3, slope:122},
+      }},
+    alicantegolf:{ nombre:'Alicante Golf',
+      par:[5,4,3,5,4,3,4,3,5,5,4,3,4,5,3,5,3,4],
+      hcp:[17,5,15,13,1,9,3,7,11,18,6,16,2,12,8,14,4,10],
+      metrosHoyos:{
+        Negras:[470,344,139,467,392,181,397,199,497,458,393,133,410,496,223,485,183,353],
+        Blancas:[459,327,129,463,373,170,389,177,480,453,387,133,390,482,212,472,175,346],
+        Amarillas:[447,304,119,457,345,140,379,162,437,443,377,121,365,451,174,463,162,332],
+        Azules:[408,297,110,416,329,134,338,145,430,399,333,107,329,443,153,442,139,300],
+        Rojas:[381,291,100,402,300,112,296,126,423,386,320,101,314,435,130,427,116,291],
+      },
+      barras:{
+        Negras:{metros:6220, cr:73.2, slope:136},
+        Blancas:{metros:6017, cr:72.2, slope:135},
+        Amarillas:{metros:5678, cr:70.4, slope:130},
+        Azules:{metros:5252, cr:68.1, slope:124},
+        Rojas:{metros:4951, cr:66.4, slope:119},
+      }},
+    plantio:{ nombre:'El Plantío',
+      par:[4,5,4,5,4,4,3,4,3,4,4,5,4,3,5,4,4,3],
+      hcp:[2,16,6,12,8,10,14,4,18,3,7,5,15,9,11,13,1,17],
+      metrosHoyos:{
+        Blancas:[395,428,340,498,390,360,180,406,125,375,366,509,284,177,515,274,395,184],
+        Amarillas:[377,420,322,468,372,350,168,367,122,355,355,494,279,154,486,268,368,166],
+        Azules:[360,397,310,457,333,335,153,322,121,343,340,416,272,146,462,255,340,155],
+        Rojas:[333,363,305,397,294,329,127,259,116,325,327,360,253,130,379,191,327,145],
+      },
+      barras:{
+        Blancas:{metros:6201, cr:73.5, slope:135},
+        Amarillas:{metros:5891, cr:71.9, slope:133},
+        Azules:{metros:5517, cr:70.1, slope:132},
+        Rojas:{metros:4960, cr:67.5, slope:126},
+      }},
+    panoramica:{ nombre:'Panorámica Golf',
+      par:[4,5,3,5,3,4,3,4,5,4,5,3,4,4,4,3,4,5],
+      hcp:[10,14,18,4,16,6,12,8,2,1,5,11,17,7,3,15,13,9],
+      metrosHoyos:{
+        Blancas:[333,469,154,518,146,391,175,400,556,425,530,169,330,374,432,191,313,523],
+        Amarillas:[317,443,139,501,133,367,159,381,520,400,502,151,306,358,404,172,300,484],
+        Azules:[286,414,127,438,118,331,151,348,482,368,461,122,276,319,368,142,271,440],
+        Rojas:[254,392,120,409,113,294,138,324,442,340,432,103,247,287,337,115,247,407],
+      },
+      barras:{
+        Blancas:{metros:6429, cr:74.0, slope:136},
+        Amarillas:{metros:6037, cr:72.0, slope:132},
+        Azules:{metros:5462, cr:68.7, slope:123},
+        Rojas:{metros:5001, cr:66.6, slope:118},
+      }},
+    borriol:{ nombre:'Borriol - Mediterráneo',
+      par:[4,3,4,5,4,3,4,5,4,4,4,3,5,4,3,5,4,4],
+      hcp:[13,15,3,1,7,17,9,5,11,8,18,10,4,16,2,12,14,6],
+      metrosHoyos:{
+        Negras:[350,207,418,569,407,183,312,502,389,333,308,202,547,334,381,176,494,388],
+        Blancas:[350,200,378,531,360,183,312,488,365,319,308,195,534,318,372,161,465,329],
+        Amarillas:[327,180,359,514,342,166,295,470,352,305,294,185,528,297,348,147,444,314],
+        Azules:[298,165,322,490,305,149,288,427,323,285,270,154,474,280,287,136,393,280],
+        Rojas:[291,145,310,468,271,135,265,417,310,278,262,148,469,271,282,118,384,270],
+      },
+      barras:{
+        Negras:{metros:6500, cr:75.3, slope:145},
+        Blancas:{metros:6168, cr:73.5, slope:143},
+        Amarillas:{metros:5867, cr:71.7, slope:140},
+        Azules:{metros:5326, cr:68.6, slope:133},
+        Rojas:{metros:5094, cr:67.5, slope:129},
+      }},
+    costazahar:{ nombre:'Costa Azahar (D Rojo)',
+      par:[4,5,4,3,4,5,4,3,3,4,5,4,3,4,5,4,3,3],
+      hcp:[1,7,13,17,3,5,9,11,15,2,8,14,18,4,6,10,12,16],
+      metrosHoyos:{
+        Amarillas:[366,461,250,90,368,468,320,160,144,366,461,250,90,368,468,320,160,144],
+        Rojas:[353,403,220,80,342,423,266,140,116,353,403,220,80,342,423,266,140,116],
+      },
+      barras:{
+        Amarillas:{metros:5254, cr:69.0, slope:131},
+        Rojas:{metros:4686, cr:66.2, slope:119},
+      }},
+    villaitana:{ nombre:'Villaitana - Levante',
+      par:[4,4,3,5,4,4,3,5,4,4,5,3,4,3,4,5,4,4],
+      hcp:[18,10,12,2,14,4,8,6,16,1,7,3,13,17,15,9,5,11],
+      metrosHoyos:{
+        Negras:[390,365,199,480,350,397,218,550,392,400,497,201,346,142,363,519,380,387],
+        Blancas:[366,349,180,452,339,384,192,526,368,380,479,185,324,124,344,497,359,374],
+        Amarillas:[343,325,163,440,307,357,176,496,344,361,446,163,304,102,323,473,309,345],
+        Azules:[307,295,130,383,275,322,144,446,315,320,415,143,285,85,290,446,272,328],
+        Rojas:[281,295,103,383,275,276,104,405,281,291,383,124,236,85,265,374,272,254],
+      },
+      barras:{
+        Negras:{metros:6576, cr:75.6, slope:133},
+        Blancas:{metros:6222, cr:73.3, slope:135},
+        Amarillas:{metros:5777, cr:70.8, slope:135},
+        Azules:{metros:5201, cr:67.8, slope:129},
+        Rojas:{metros:4687, cr:65.1, slope:115},
+      }},
+    olivanova:{ nombre:'Oliva Nova Golf',
+      par:[5,4,3,4,4,3,4,5,4,4,3,4,4,5,4,3,5,4],
+      hcp:[7,13,15,9,17,3,5,11,1,4,12,6,8,16,2,18,10,14],
+      metrosHoyos:{
+        Negras:[507,358,160,360,265,190,366,493,405,404,187,396,387,458,415,142,503,311],
+        Blancas:[488,347,152,349,254,170,352,478,395,393,173,381,369,444,397,129,465,301],
+        Amarillas:[476,317,146,339,245,166,337,454,382,371,163,365,338,438,377,122,455,293],
+        Azules:[449,311,122,308,240,155,303,421,362,347,141,347,331,410,348,103,450,261],
+        Rojas:[433,295,117,295,218,145,295,402,352,341,128,331,323,395,340,95,429,249],
+      },
+      barras:{
+        Negras:{metros:6307, cr:73.5, slope:139},
+        Blancas:{metros:6037, cr:72.1, slope:137},
+        Amarillas:{metros:5784, cr:70.7, slope:135},
+        Azules:{metros:5409, cr:68.5, slope:123},
+        Rojas:{metros:5183, cr:67.7, slope:118},
+      }},
+    elsaler:{ nombre:'El Saler',
+      par:[4,4,5,3,5,4,4,4,3,4,5,3,4,4,5,4,3,4],
+      hcp:[8,6,4,16,12,2,14,10,18,5,3,17,13,11,9,7,15,1],
+      metrosHoyos:{
+        Blancas:[391,344,486,173,471,404,327,328,143,365,519,181,319,379,516,390,195,426],
+        Amarillas:[375,326,470,154,451,388,313,310,127,353,503,170,308,356,505,359,170,404],
+        Azules:[325,294,470,154,451,339,313,279,127,304,429,170,308,304,414,330,150,363],
+        Rojas:[296,294,411,119,385,339,252,279,110,304,429,131,285,304,414,330,133,363],
+      },
+      barras:{
+        Blancas:{metros:6357, cr:74.2, slope:136},
+        Amarillas:{metros:6042, cr:72.7, slope:133},
+        Azules:{metros:5524, cr:69.4, slope:129},
+        Rojas:{metros:5178, cr:67.8, slope:123},
+      }},
+    foressos:{ nombre:'Foressos Golf',
+      par:[4,4,5,4,3,5,3,4,4,4,4,5,4,3,5,4,4,3],
+      hcp:[2,4,14,18,16,10,8,12,6,11,17,7,3,15,13,9,5,1],
+      metrosHoyos:{
+        Blancas:[421,378,521,327,139,518,146,300,396,336,335,511,355,151,500,407,203,420],
+        Amarillas:[383,364,466,305,126,502,133,293,388,330,296,491,332,147,459,380,194,380],
+        Azules:[343,349,433,284,118,473,125,283,359,314,259,465,289,121,450,331,186,354],
+        Rojas:[335,336,408,270,109,439,116,256,324,293,227,435,279,104,425,328,142,337],
+      },
+      barras:{
+        Blancas:{metros:6364, cr:73.7, slope:134},
+        Amarillas:{metros:5969, cr:71.6, slope:128},
+        Azules:{metros:5536, cr:69.0, slope:123},
+        Rojas:{metros:5163, cr:67.1, slope:118},
+      }},
+    elbosque:{ nombre:'El Bosque',
+      par:[4,4,5,3,4,4,5,3,4,4,5,3,4,3,5,4,4,4],
+      hcp:[11,3,15,17,7,13,5,9,1,12,10,14,4,18,8,16,2,6],
+      metrosHoyos:{
+        Negras:[349,379,504,163,347,353,489,183,448,381,444,193,421,159,534,361,433,329],
+        Blancas:[332,365,485,163,339,353,481,160,384,369,444,134,380,159,463,350,400,320],
+        Amarillas:[317,355,467,147,324,335,462,149,365,340,432,130,333,144,452,300,382,310],
+        Azules:[296,337,440,142,287,296,436,126,345,314,405,119,296,129,427,283,366,292],
+        Rojas:[285,315,406,126,192,258,419,110,315,308,375,105,255,121,383,268,280,230],
+      },
+      barras:{
+        Negras:{metros:6470, cr:75.5, slope:148},
+        Blancas:{metros:6081, cr:73.3, slope:143},
+        Amarillas:{metros:5744, cr:71.5, slope:140},
+        Azules:{metros:5336, cr:69.6, slope:131},
+        Rojas:{metros:4751, cr:66.5, slope:128},
+      }},
+    lasella_gm:{ nombre:'La Sella (Gregal+Mestral)',
+      par:[4,5,4,3,4,3,4,4,5,3,5,4,4,5,3,4,5,3],
+      hcp:[7,1,15,13,11,17,3,5,9,4,8,16,2,14,18,10,6,12],
+      metrosHoyos:{
+        Blancas:[386,529,281,169,314,125,416,375,470,180,513,308,437,443,145,377,498,157],
+        Amarillas:[380,524,263,162,307,114,408,361,429,154,468,276,405,414,126,343,465,131],
+        Rojas:[341,485,234,133,269,97,343,313,361,137,428,235,337,397,115,306,438,108],
+        Naranjas:[313,456,183,108,232,92,311,261,356,107,400,206,288,364,90,274,411,108],
+      },
+      barras:{
+        Blancas:{metros:6123, cr:73.2, slope:133},
+        Amarillas:{metros:5730, cr:71.1, slope:129},
+        Rojas:{metros:5077, cr:68.0, slope:124},
+        Naranjas:{metros:4560, cr:65.0, slope:114},
+      }},
+    lasella_lm:{ nombre:'La Sella (Llebeig+Mestral)',
+      par:[4,4,5,4,3,4,4,3,5,3,5,4,4,5,3,4,5,3],
+      hcp:[15,17,5,3,7,11,1,9,13,4,8,16,2,14,18,10,6,12],
+      metrosHoyos:{
+        Blancas:[339,316,506,400,184,305,439,203,475,180,513,308,437,443,145,377,498,157],
+        Amarillas:[339,299,487,377,171,287,418,178,460,154,468,276,405,414,126,343,465,131],
+        Rojas:[297,276,442,330,151,250,362,144,399,137,428,235,337,397,115,306,438,108],
+        Naranjas:[258,276,402,293,119,250,292,117,362,107,400,206,288,364,90,274,411,108],
+      },
+      barras:{
+        Blancas:{metros:6225, cr:74.0, slope:137},
+        Amarillas:{metros:5798, cr:71.8, slope:133},
+        Rojas:{metros:5152, cr:68.8, slope:122},
+        Naranjas:{metros:4617, cr:65.8, slope:113},
+      }},
+    lasella_lg:{ nombre:'La Sella (Llebeig+Gregal)',
+      par:[4,4,5,4,3,4,4,3,5,4,5,4,3,4,3,4,4,5],
+      hcp:[15,17,5,3,7,11,1,9,13,8,2,16,14,12,18,4,6,10],
+      metrosHoyos:{
+        Blancas:[339,316,506,400,184,305,439,203,475,386,529,281,169,314,125,416,375,470],
+        Amarillas:[339,299,487,377,171,287,418,178,460,380,524,263,162,307,114,408,361,429],
+        Rojas:[297,276,442,330,151,250,362,144,399,341,485,234,133,269,97,343,313,361],
+        Naranjas:[258,276,402,293,119,250,292,117,362,313,456,183,108,232,92,311,261,356],
+      },
+      barras:{
+        Blancas:{metros:6232, cr:74.2, slope:138},
+        Amarillas:{metros:5964, cr:72.7, slope:136},
+        Rojas:{metros:5227, cr:69.0, slope:127},
+        Naranjas:{metros:4681, cr:66.0, slope:120},
+      }},
+    masiapp:{ nombre:'Masía Las Estrellas (P&P)',
+      par:[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3],
+      hcp:[10,12,14,18,16,4,6,2,8,9,11,13,17,15,3,5,1,7],
+      metrosHoyos:{
+        Verdes:[85,67,67,63,62,54,79,94,85,90,80,70,74,66,61,97,103,119],
+      },
+      barras:{
+        Verdes:{metros:1416, cr:50.0, slope:63},
+      }},
+    escorpion_mn:{ nombre:'Escorpión (Masía+Nuevos)',
+      parB:{
+        Doradas:[5,4,4,4,4,3,4,3,4,5,4,5,3,5,4,4,3,4],
+        Negras:[5,4,4,4,4,3,4,3,4,5,4,5,3,5,4,4,3,4],
+        Amarillas:[5,4,4,4,4,3,4,3,5,5,4,5,3,5,4,4,3,4],
+        Azules:[5,4,4,4,4,3,4,3,4,5,4,5,3,5,4,4,3,4],
+        Rojas:[5,4,4,4,4,3,4,3,5,5,4,5,3,5,4,4,3,4],
+      },
+      par:[5,4,4,4,4,3,4,3,5,5,4,5,3,5,4,4,3,4],
+      hcp:[6,16,10,2,4,18,8,14,12,15,5,13,17,9,1,3,11,7],
+      metrosHoyos:{
+        Doradas:[455,325,355,384,359,147,355,166,361,446,339,489,128,510,395,379,184,362],
+        Negras:[470,334,374,417,373,161,369,178,389,453,350,500,136,526,421,420,215,374],
+        Amarillas:[431,303,318,368,332,136,333,143,429,425,299,428,118,465,368,345,170,329],
+        Azules:[442,313,344,377,340,138,339,154,346,438,329,473,126,474,380,353,177,352],
+        Rojas:[392,260,283,313,294,111,292,129,379,387,253,383,94,430,318,301,143,287],
+      },
+      barras:{
+        Doradas:{metros:6139, cr:72.5, slope:132},
+        Negras:{metros:6460, cr:74.4, slope:136},
+        Amarillas:{metros:5740, cr:70.4, slope:128},
+        Azules:{metros:5895, cr:71.2, slope:130},
+        Rojas:{metros:5049, cr:67.0, slope:118},
+      }},
+    escorpion_ml:{ nombre:'Escorpión (Masía+Lagos)',
+      parB:{
+        Doradas:[5,4,4,4,4,3,4,3,5,4,4,3,4,3,5,4,3,5],
+        Negras:[5,4,4,4,4,3,4,3,4,4,4,3,4,3,5,4,3,5],
+        Amarillas:[5,4,4,4,4,3,4,3,5,4,4,3,4,3,5,4,3,5],
+        Azules:[5,4,4,4,4,3,4,3,5,4,4,3,4,3,5,4,3,5],
+        Rojas:[5,4,4,4,4,3,4,3,5,4,4,3,4,3,5,4,3,5],
+      },
+      par:[5,4,4,4,4,3,4,3,5,4,4,3,4,3,5,4,3,5],
+      hcp:[6,16,10,2,4,18,8,14,12,5,9,17,3,15,13,11,7,1],
+      metrosHoyos:{
+        Doradas:[455,325,355,384,359,147,355,166,449,384,332,148,352,126,504,330,171,458],
+        Negras:[470,334,374,417,373,161,369,178,389,402,350,161,372,143,525,337,202,506],
+        Amarillas:[431,303,318,368,332,136,333,143,429,358,295,136,314,114,455,305,155,413],
+        Azules:[442,313,344,377,340,138,339,154,440,366,318,141,331,120,471,323,159,435],
+        Rojas:[392,260,283,313,294,111,292,129,379,318,283,110,275,97,409,270,128,356],
+      },
+      barras:{
+        Doradas:{metros:5800, cr:70.3, slope:127},
+        Negras:{metros:6063, cr:71.8, slope:130},
+        Amarillas:{metros:5338, cr:68.0, slope:123},
+        Azules:{metros:5551, cr:69.0, slope:125},
+        Rojas:{metros:4699, cr:64.6, slope:112},
+      }},
+  };
+  const MANUAL='__manual__';
+  const STORE_KEY='vuelta_campos_v1';
+  let USER_COURSES={};
+  function loadUser(){
+    try{ const s=localStorage.getItem(STORE_KEY);
+      if(s){ USER_COURSES=JSON.parse(s)||{}; Object.assign(COURSES,USER_COURSES); } }catch(e){}
+  }
+  function saveUser(){ try{ localStorage.setItem(STORE_KEY,JSON.stringify(USER_COURSES)); }catch(e){} }
+  function persist(key){ USER_COURSES[key]=COURSES[key]; saveUser(); }
+
+  /* ═══ Construir filas ═══ */
+  const rows=document.getElementById('rows');
+  const cIn=(cls,type)=>`<td><input inputmode="${type}" data-f="${cls}"></td>`;
+  function golpesCell(){
+    let o='<option value=""></option>';
+    for(let v=0;v<=12;v++) o+=`<option value="${v}">${v}</option>`;
+    return `<td><select data-f="golpes" class="golpes-sel">${o}</select></td>`;
+  }
+  function puttsCell(){
+    let o='<option value=""></option>';
+    for(let v=0;v<=5;v++) o+=`<option value="${v}">${v}</option>`;
+    return `<td><select data-f="putts" class="golpes-sel">${o}</select></td>`;
+  }
+  for(let h=1;h<=18;h++){
+    const tr=document.createElement('tr'); tr.dataset.hole=h;
+    tr.innerHTML=`<td class="hno">${h}</td>`+cIn('par','numeric')+cIn('metros','numeric')+
+      cIn('hcp','numeric')+`<td><span class="tick" data-t="calle"></span></td>`+
+      `<td><span class="tick" data-t="green"></span></td>`+puttsCell()+golpesCell();
+    rows.appendChild(tr);
+    if(h===9) rows.appendChild(sumRow('Ida'));
+    if(h===18){rows.appendChild(sumRow('Vuelta'));rows.appendChild(sumRow('Total',true));}
+  }
+  function sumRow(label,grand){
+    const tr=document.createElement('tr'); tr.className='sum'+(grand?' grand':''); tr.dataset.sum=label;
+    tr.innerHTML=`<td class="lab">${label}</td><td data-s="par">–</td><td data-s="metros">–</td>`+
+      `<td></td><td></td><td></td><td data-s="putts">–</td><td data-s="golpes">–</td>`;
+    return tr;
+  }
+
+  /* ═══ Desplegables ═══ */
+  const campoSel=document.getElementById('campoSel'), barraSel=document.getElementById('barraSel');
+  function buildCampoOptions(sel){
+    campoSel.innerHTML='<option value="">— elegir —</option>';
+    Object.keys(COURSES).forEach(k=>{
+      const o=document.createElement('option'); o.value=k; o.textContent=COURSES[k].nombre; campoSel.appendChild(o);
+    });
+    const om=document.createElement('option'); om.value=MANUAL; om.textContent='Manual (a mano)'; campoSel.appendChild(om);
+    if(sel) campoSel.value=sel;
+  }
+  loadUser();
+  buildCampoOptions();
+
+  campoSel.addEventListener('change',()=>{
+    const key=campoSel.value;
+    document.getElementById('manualSave').classList.toggle('show',key===MANUAL);
+    barraSel.innerHTML='';
+    if(!key||key===MANUAL){ barraSel.innerHTML='<option value="">—</option>'; renderInfo(null); if(key===MANUAL)limpiarCampo(); return; }
+    const c=COURSES[key];
+    Object.keys(c.barras).forEach(b=>{ const o=document.createElement('option'); o.value=b; o.textContent=b; barraSel.appendChild(o); });
+    aplicarCampo(); // rellena par/hcp
+    barraSel.value=Object.keys(c.barras)[0];
+    aplicarBarra();
+  });
+  barraSel.addEventListener('change',aplicarBarra);
+
+  /* ═══ Selector 18 / 9 hoyos ═══ */
+  let HOLES_FROM=1, HOLES_TO=18;
+  let CUR_CR=null, CUR_SLOPE=null;
+  const hoyosSel=document.getElementById('hoyosSel');
+  function setHoles(mode){
+    if(mode==='9a'){HOLES_FROM=1;HOLES_TO=9;}
+    else if(mode==='9b'){HOLES_FROM=10;HOLES_TO=18;}
+    else {HOLES_FROM=1;HOLES_TO=18;}
+    document.querySelectorAll('#rows tr[data-hole]').forEach(tr=>{
+      const h=+tr.dataset.hole; tr.classList.toggle('hide', h<HOLES_FROM||h>HOLES_TO);
+    });
+    const showSum={Ida:false,Vuelta:false,Total:false};
+    if(mode==='9a') showSum.Ida=true;
+    else if(mode==='9b') showSum.Vuelta=true;
+    else {showSum.Ida=showSum.Vuelta=showSum.Total=true;}
+    document.querySelectorAll('#rows tr[data-sum]').forEach(tr=>{
+      tr.classList.toggle('hide', !showSum[tr.dataset.sum]);
+    });
+    fillWHSauto();
+    recompute();
+  }
+  hoyosSel.addEventListener('change',()=>setHoles(hoyosSel.value));
+
+  function setCol(field,arr){
+    document.querySelectorAll('#rows tr[data-hole]').forEach((tr,i)=>{
+      const inp=tr.querySelector(`input[data-f="${field}"]`);
+      if(arr&&arr[i]!=null&&arr[i]!==''){ inp.value=arr[i]; inp.classList.add('filled'); }
+      else { inp.value=''; inp.classList.remove('filled'); }
+    });
+  }
+  function parFor(c,b){ return (c.parB && b && c.parB[b]) ? c.parB[b] : c.par; }
+  function aplicarCampo(){
+    const c=COURSES[campoSel.value]; if(!c)return;
+    setCol('hcp',c.hcp);
+    recompute();
+  }
+  function aplicarBarra(){
+    const c=COURSES[campoSel.value]; const b=barraSel.value;
+    if(!c||!b){renderInfo(null);return;}
+    const bd=c.barras[b];
+    CUR_CR=bd.cr; CUR_SLOPE=bd.slope;
+    const parArr=parFor(c,b);
+    setCol('par',parArr);
+    // par 3 -> desactiva calle
+    document.querySelectorAll('#rows tr[data-hole]').forEach(tr=>{
+      const par=tr.querySelector('input[data-f="par"]').value.trim();
+      const tick=tr.querySelector('.tick[data-t="calle"]'); const p3=par==='3';
+      tick.classList.toggle('off-na',p3); if(p3){tick.classList.remove('on');tick.textContent='';}
+    });
+    const perHole=c.metrosHoyos&&c.metrosHoyos[b];
+    setCol('metros',perHole||null);
+    renderInfo({nombre:c.nombre,barra:b,cr:bd.cr,slope:bd.slope,metros:bd.metros,
+      par:parArr?parArr.reduce((a,x)=>a+(x||0),0):72, perHole:!!perHole});
+    fillWHSauto();
+    recompute();
+  }
+  function limpiarCampo(){ setCol('par',null); setCol('hcp',null); setCol('metros',null);
+    CUR_CR=null; CUR_SLOPE=null;
+    document.querySelectorAll('.tick.off-na').forEach(t=>t.classList.remove('off-na')); renderInfo(null); fillWHSauto(); recompute(); }
+
+  function renderInfo(d){
+    const box=document.getElementById('courseInfo');
+    if(!d){box.classList.remove('show');box.innerHTML='';return;}
+    box.classList.add('show');
+    box.innerHTML=
+      `<span class="chip">${d.barra}</span>`+
+      `<span class="chip">Par<b>${d.par}</b></span>`+
+      `<span class="chip">CR<b>${d.cr!=null?d.cr.toFixed(1):'—'}</b></span>`+
+      `<span class="chip">Slope<b>${d.slope!=null?d.slope:'—'}</b></span>`+
+      `<span class="chip">Metros<b>${d.metros}</b></span>`+
+      (d.perHole?'':`<span class="chip pend">metros/hoyo: pendientes de tarjeta</span>`);
+  }
+
+  /* ═══ Checks ═══ */
+  rows.addEventListener('click',e=>{
+    const t=e.target.closest('.tick'); if(!t||t.classList.contains('off-na'))return;
+    t.classList.toggle('on'); t.textContent=t.classList.contains('on')?'✓':''; recompute();
+  });
+  rows.addEventListener('input',e=>{
+    const inp=e.target.closest('input'); if(!inp)return;
+    inp.classList.toggle('filled',inp.value.trim()!=='');
+    if(inp.dataset.f==='par'){
+      const tick=inp.closest('tr').querySelector('.tick[data-t="calle"]'); const p3=inp.value.trim()==='3';
+      tick.classList.toggle('off-na',p3); if(p3){tick.classList.remove('on');tick.textContent='';}
+    }
+    recompute();
+  });
+  rows.addEventListener('change',e=>{ if(e.target.matches('select[data-f]')) recompute(); });
+  function sumRange(field,from,to){
+    let s=0,any=false;
+    document.querySelectorAll('#rows tr[data-hole]').forEach(tr=>{
+      const h=+tr.dataset.hole; if(h<from||h>to)return;
+      const v=parseFloat(tr.querySelector(`[data-f="${field}"]`).value);
+      if(!isNaN(v)){s+=v;any=true;}
+    });
+    return any?s:null;
+  }
+  const putVal=(lab,f,v)=>{const c=document.querySelector(`tr[data-sum="${lab}"] td[data-s="${f}"]`); if(c)c.textContent=v==null?'–':v;};
+  function recompute(){
+    [['Ida',1,9],['Vuelta',10,18],['Total',1,18]].forEach(([lab,a,b])=>{
+      ['par','metros','putts','golpes'].forEach(f=>putVal(lab,f,sumRange(f,a,b)));
+    });
+    const golpes=sumRange('golpes',HOLES_FROM,HOLES_TO), par=sumRange('par',HOLES_FROM,HOLES_TO);
+    document.getElementById('stGolpes').textContent=golpes==null?'—':golpes;
+    let vs='—'; if(golpes!=null&&par!=null){const d=golpes-par;vs=d===0?'E':(d>0?'+'+d:d);}
+    document.getElementById('stPar').textContent=vs;
+    let cEl=0,cHit=0,gP=0,gH=0;
+    document.querySelectorAll('#rows tr[data-hole]').forEach(tr=>{
+      const h=+tr.dataset.hole; if(h<HOLES_FROM||h>HOLES_TO)return;
+      const par=tr.querySelector('input[data-f="par"]').value.trim();
+      const played=tr.querySelector('[data-f="golpes"]').value.trim()!=='';
+      const calle=tr.querySelector('.tick[data-t="calle"]').classList.contains('on');
+      const green=tr.querySelector('.tick[data-t="green"]').classList.contains('on');
+      if(played){gP++; if(green)gH++; if(par==='4'||par==='5'){cEl++; if(calle)cHit++;}}
+    });
+    setPct('stCalles',cEl?Math.round(cHit/cEl*100):null);
+    setPct('stGreens',gP?Math.round(gH/gP*100):null);
+    const gEl=document.getElementById('whsGolpes'); if(gEl){ gEl.textContent=golpes==null?'—':golpes; computeWHS(); }
+  }
+  /* ═══ WHS Nivel de Juego ═══ */
+  function fillWHSauto(){
+    const is9=(HOLES_TO-HOLES_FROM+1)===9;
+    const modeEl=document.getElementById('whsMode');
+    if(modeEl) modeEl.textContent = is9 ? (HOLES_FROM===1?'9 · 1º recorrido':'9 · 2º recorrido') : '18 hoyos';
+    const vc=document.getElementById('whsVC'), sl=document.getElementById('whsSlope');
+    if(!vc||!sl) return;
+    vc.value = (CUR_CR!=null) ? (is9?(CUR_CR/2):CUR_CR).toFixed(1) : '';
+    sl.value = (CUR_SLOPE!=null) ? CUR_SLOPE : '';
+    computeWHS();
+  }
+  function computeWHS(){
+    const out=document.getElementById('whsDiff'); if(!out) return;
+    const g=parseFloat((document.getElementById('whsGolpes').textContent||'').trim());
+    const vc=parseFloat(document.getElementById('whsVC').value);
+    const sl=parseFloat(document.getElementById('whsSlope').value);
+    const asc=parseFloat(document.getElementById('whsASC').value)||0;
+    if(!isNaN(g)&&!isNaN(vc)&&!isNaN(sl)&&sl>0){
+      const d=(113/sl)*(g-vc-asc);
+      out.textContent=(d>0?'+':'')+d.toFixed(1);
+    } else out.textContent='—';
+    // Hándicap de Juego = round( idx·(Slope/113) + (VC − Par) ); en 9 hoyos idx/2
+    const hj=document.getElementById('whsHJ');
+    const idx=parseFloat(document.getElementById('whsHcp').value);
+    const par=sumRange('par',HOLES_FROM,HOLES_TO);
+    const is9=(HOLES_TO-HOLES_FROM+1)===9;
+    if(!isNaN(idx)&&!isNaN(vc)&&!isNaN(sl)&&sl>0&&par!=null){
+      const idxU=is9?idx/2:idx;
+      hj.textContent=Math.round(idxU*sl/113 + (vc-par));
+    } else hj.textContent='—';
+  }
+  ['whsHcp','whsVC','whsSlope','whsASC'].forEach(id=>{
+    const e=document.getElementById(id); if(e) e.addEventListener('input',computeWHS);
+  });
+  const setPct=(id,v)=>{document.getElementById(id).innerHTML=v==null?'—<small>%</small>':v+'<small>%</small>';};
+
+  /* ═══ Marcas y objetos por hoyo (green / calle) ═══ */
+  const NS='http://www.w3.org/2000/svg';
+  const BEAN="M-20,-2C-22,-11 -11,-14 -3,-9C3,-5 10,-11 16,-8C23,-4 21,8 13,10C5,12 1,7 -7,9C-16,11 -18,5 -20,-2Z";
+  const WATER="M-44,-4C-49,-22 -20,-26 -4,-17C9,-11 23,-24 35,-15C50,-3 45,18 26,22C9,25 3,12 -14,17C-37,24 -42,10 -44,-4Z";
+  const CANOPY="M0,-13C5,-13 9,-9 10,-5C14,-4 14,4 9,6C8,10 3,12 -2,10C-7,12 -12,7 -10,3C-14,-1 -11,-8 -5,-7C-4,-11 -2,-13 0,-13Z";
+  const el=(tag,a)=>{const e=document.createElementNS(NS,tag);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const TOOL={fairField:'golpe',greenField:'golpe'};
+  [['fairPalette','fairField'],['greenPalette','greenField']].forEach(([pid,sid])=>{
+    document.querySelectorAll('#'+pid+' .pal').forEach(b=>b.addEventListener('click',()=>{
+      TOOL[sid]=b.dataset.tool;
+      document.querySelectorAll('#'+pid+' .pal').forEach(x=>x.classList.toggle('on',x===b));
+      deselect();
+    }));
+  });
+  function setT(o){ o.setAttribute('transform',`translate(${o.dataset.x},${o.dataset.y}) rotate(${o.dataset.r}) scale(${o.dataset.s})`); }
+  const COLORS={'Salida':'#2F6FB0','Colocación':'#14A8A0','Aproche':'#2E8B57','Chip':'#E0872B','Putt':'#8046B0'};
+  const ALL_TYPES=Object.keys(COLORS).map(t=>({t,c:COLORS[t]}));
+  const ZONE_TYPES={ greenField:['Aproche','Chip','Putt','Salida'], fairField:['Salida','Colocación','Aproche'] };
+  const curType={ greenField:{t:'Aproche',c:COLORS['Aproche']}, fairField:{t:'Salida',c:COLORS['Salida']} };
+  function buildTypes(boxId,zone){
+    const box=document.getElementById(boxId);
+    ZONE_TYPES[zone].forEach((tn,i)=>{ const b=document.createElement('button'); b.className='st'+(i===0?' on':'');
+      b.style.setProperty('--c',COLORS[tn]); b.textContent=tn;
+      b.addEventListener('click',()=>{ curType[zone]={t:tn,c:COLORS[tn]};
+        document.querySelectorAll('#'+boxId+' .st').forEach(x=>x.classList.toggle('on',x===b)); });
+      box.appendChild(b); });
+  }
+  buildTypes('shotTypesGreen','greenField');
+  buildTypes('shotTypesFair','fairField');
+  let PXM=7.8, greenDepths={};
+  try{ const s=localStorage.getItem('vuelta_greenm'); if(s){ const p=JSON.parse(s);
+    if(p&&typeof p==='object') greenDepths=p; else if(!isNaN(+s)) greenDepths={default:+s}; } }catch(e){}
+  function gKey(){ return (campoSel.value&&campoSel.value!==MANUAL)?campoSel.value:'default'; }
+  function setScale(fondo){ fondo=Math.max(6,Math.min(40,+fondo||20)); PXM=156/fondo;
+    const p=document.getElementById('grid1m'); if(p){p.setAttribute('width',PXM.toFixed(2));p.setAttribute('height',PXM.toFixed(2));} return fondo; }
+  function loadGreenDepth(){ const k=gKey();
+    const gd=greenDepths[k]!=null?greenDepths[k]:(greenDepths['default']!=null?greenDepths['default']:20);
+    document.getElementById('greenDepth').value=gd; setScale(gd); }
+  (function(){ const inp=document.getElementById('greenDepth');
+    inp.addEventListener('input',()=>{ const v=setScale(inp.value); greenDepths[gKey()]=v; try{localStorage.setItem('vuelta_greenm',JSON.stringify(greenDepths));}catch(e){} });
+    loadGreenDepth(); })();
+  campoSel.addEventListener('change',loadGreenDepth);
+  function makeObj(svg,kind,x,y,r,s,color,type,m){
+    if(kind==='golpe'){ const g=el('g',{class:'mark'});
+      g.dataset.x=x; g.dataset.y=y; g.dataset.color=color||'#C8402F'; if(type)g.dataset.type=type;
+      if(m!=null&&m!=='') g.dataset.m=m;
+      g.setAttribute('transform',`translate(${x},${y})`);
+      const tx=el('text',{'text-anchor':'middle',y:7}); tx.style.fill=color||'#C8402F'; tx.textContent='✕'; g.appendChild(tx);
+      if(m!=null&&m!=='') { const ml=el('text',{class:'mlab',x:12,y:2}); ml.textContent=m+'m'; g.appendChild(ml); }
+      svg.appendChild(g); return g; }
+    let o;
+    if(kind==='bunker'){ o=el('path',{d:BEAN,class:'obj-bunker',fill:'var(--sand)',stroke:'#CDB985','stroke-width':0.9}); }
+    else if(kind==='agua'){ o=el('path',{d:WATER,class:'obj-water',fill:'#AAD4E8',stroke:'#C8402F','stroke-width':2.6}); }
+    else if(kind==='arbol'){ o=el('g',{class:'obj-arbol'});
+      o.appendChild(el('circle',{r:18,fill:'transparent'}));
+      o.appendChild(el('path',{d:CANOPY,fill:'#4E8A5A',stroke:'#35633F','stroke-width':1}));
+      o.appendChild(el('rect',{x:-2.2,y:6,width:4.4,height:9,rx:1,fill:'#8A5A3C'})); }
+    o.dataset.x=x; o.dataset.y=y; o.dataset.r=r; o.dataset.s=s; setT(o); svg.appendChild(o); return o;
+  }
+  function placeAt(svg,loc,kind){
+    if(kind==='golpe'){
+      let m;
+      if(svg.id==='greenField'){ const v=(document.getElementById('greenMeters').value||'').trim();
+        if(v!=='') m=v; else { const f=document.getElementById('greenFlag'); m=Math.round(Math.hypot(loc.x-(+f.dataset.x),loc.y-(+f.dataset.y))/PXM); } }
+      const g=makeObj(svg,'golpe',loc.x,loc.y,0,1,curType[svg.id].c,curType[svg.id].t,m);
+      if(svg.id==='greenField') document.getElementById('greenMeters').value='';
+      return g;
+    }
+    const r=kind==='bunker'?Math.round(Math.random()*60-30):0;
+    const s=kind==='bunker'?1.35:(kind==='agua'?0.6:1);
+    return makeObj(svg,kind,loc.x,loc.y,r,s);
+  }
+  /* almacenamiento por hoyo */
+  let holeData={}, trackerHole=1;
+  function serGolpes(svgId){ const out=[];
+    document.querySelectorAll('#'+svgId+' .mark').forEach(m=>out.push({k:'golpe',x:+m.dataset.x,y:+m.dataset.y,c:m.dataset.color,t:m.dataset.type,m:m.dataset.m}));
+    return out; }
+  function serObjs(svgId){ const out=[];
+    document.querySelectorAll('#'+svgId+' .obj-bunker, #'+svgId+' .obj-water, #'+svgId+' .obj-arbol').forEach(o=>{
+      const k=o.classList.contains('obj-bunker')?'bunker':o.classList.contains('obj-water')?'agua':'arbol';
+      out.push({k,x:+o.dataset.x,y:+o.dataset.y,r:+o.dataset.r,s:+o.dataset.s}); });
+    return out; }
+  function clearPlaced(svgId){ document.querySelectorAll('#'+svgId+' .mark, #'+svgId+' .obj-bunker, #'+svgId+' .obj-water, #'+svgId+' .obj-arbol, #'+svgId+' .sel-ring').forEach(e=>e.remove()); }
+  function setFlag(x,y){ const f=document.getElementById('greenFlag'); f.dataset.x=x; f.dataset.y=y; f.setAttribute('transform',`translate(${x},${y})`); }
+  let layouts={}; try{ layouts=JSON.parse(localStorage.getItem('vuelta_layouts')||'{}')||{}; }catch(e){}
+  function saveLayouts(){ try{localStorage.setItem('vuelta_layouts',JSON.stringify(layouts));}catch(e){} }
+  function saveCurrentHole(){ const f=document.getElementById('greenFlag');
+    holeData[trackerHole]={green:serGolpes('greenField'),fair:serGolpes('fairField')};
+    try{localStorage.setItem('vuelta_round',JSON.stringify(holeData));}catch(e){}
+    const lk=gKey(); if(!layouts[lk])layouts[lk]={};
+    layouts[lk][trackerHole]={green:serObjs('greenField'),fair:serObjs('fairField'),flag:{x:+f.dataset.x,y:+f.dataset.y}};
+    saveLayouts(); }
+  function renderHole(h){
+    const lk=gKey(); const lay=(layouts[lk]&&layouts[lk][h])||null;
+    [['greenField','green'],['fairField','fair']].forEach(([id,key])=>{
+      clearPlaced(id); const svg=document.getElementById(id);
+      ((lay&&lay[key])||[]).forEach(o=>makeObj(svg,o.k,o.x,o.y,o.r||0,o.s||1));
+      ((holeData[h]&&holeData[h][key])||[]).forEach(o=>makeObj(svg,'golpe',o.x,o.y,0,1,o.c,o.t,o.m));
+    });
+    const fl=lay&&lay.flag; setFlag(fl?fl.x:215, fl?fl.y:150);
+  }
+  function loadRound(){ try{ const s=localStorage.getItem('vuelta_round'); if(s) holeData=JSON.parse(s)||{}; }catch(e){} }
+  function goHole(h){
+    h=Math.max(1,Math.min(18,h)); saveCurrentHole(); trackerHole=h;
+    document.getElementById('holeNum').textContent=h; deselect(); renderHole(h); updateCounts();
+  }
+  document.getElementById('holePrev').addEventListener('click',()=>goHole(trackerHole-1));
+  document.getElementById('holeNext').addEventListener('click',()=>goHole(trackerHole+1));
+  (function(){
+    const nrBtn=document.getElementById('newRound'); let armed=false, timer=null;
+    nrBtn.addEventListener('click',()=>{
+      if(!armed){ armed=true; nrBtn.textContent='¿Seguro?'; nrBtn.classList.add('arm');
+        timer=setTimeout(()=>{ armed=false; nrBtn.textContent='Nueva ronda'; nrBtn.classList.remove('arm'); },3000); return; }
+      clearTimeout(timer); armed=false; nrBtn.textContent='Nueva ronda'; nrBtn.classList.remove('arm');
+      holeData={}; try{localStorage.removeItem('vuelta_round');}catch(e){}
+      trackerHole=1; document.getElementById('holeNum').textContent=1;
+      deselect(); renderHole(1); updateCounts();
+    });
+  })();
+  campoSel.addEventListener('change',()=>renderHole(trackerHole));
+  (function(){
+    const cb=document.getElementById('clearLayout'); let armed=false, timer=null;
+    cb.addEventListener('click',()=>{
+      if(!armed){ armed=true; cb.textContent='¿Seguro?'; cb.classList.add('arm');
+        timer=setTimeout(()=>{ armed=false; cb.textContent='Borrar diseño'; cb.classList.remove('arm'); },3000); return; }
+      clearTimeout(timer); armed=false; cb.textContent='Borrar diseño'; cb.classList.remove('arm');
+      delete layouts[gKey()]; saveLayouts(); deselect(); renderHole(trackerHole);
+    });
+  })();
+
+  /* selección + redimensionar */
+  const objCtrl=document.getElementById('objCtrl');
+  let SELECTED=null, SEL_RING=null;
+  function selectObj(o){
+    deselect(); SELECTED=o; const svg=o.ownerSVGElement; const b=o.getBBox();
+    SEL_RING=el('rect',{x:b.x-3,y:b.y-3,width:b.width+6,height:b.height+6,class:'sel-ring',transform:o.getAttribute('transform')||''});
+    svg.appendChild(SEL_RING); objCtrl.classList.add('show');
+  }
+  function deselect(){ if(SEL_RING){SEL_RING.remove();SEL_RING=null;} SELECTED=null; objCtrl.classList.remove('show'); }
+  function syncRing(){ if(SEL_RING&&SELECTED) SEL_RING.setAttribute('transform',SELECTED.getAttribute('transform')||''); }
+  document.getElementById('objMinus').addEventListener('click',()=>{ if(!SELECTED)return; SELECTED.dataset.s=Math.max(0.3,(+SELECTED.dataset.s*0.85)).toFixed(3); setT(SELECTED); syncRing(); saveCurrentHole(); });
+  document.getElementById('objPlus').addEventListener('click',()=>{ if(!SELECTED)return; SELECTED.dataset.s=Math.min(3.2,(+SELECTED.dataset.s*1.18)).toFixed(3); setT(SELECTED); syncRing(); saveCurrentHole(); });
+  document.getElementById('objRotL').addEventListener('click',()=>{ if(!SELECTED)return; SELECTED.dataset.r=((+SELECTED.dataset.r||0)-15); setT(SELECTED); syncRing(); saveCurrentHole(); });
+  document.getElementById('objRotR').addEventListener('click',()=>{ if(!SELECTED)return; SELECTED.dataset.r=((+SELECTED.dataset.r||0)+15); setT(SELECTED); syncRing(); saveCurrentHole(); });
+  document.getElementById('objDel').addEventListener('click',()=>{ if(!SELECTED)return; SELECTED.remove(); deselect(); updateCounts(); saveCurrentHole(); });
+  document.getElementById('objDone').addEventListener('click',deselect);
+
+  document.querySelectorAll('svg.field').forEach(svg=>{
+    svg.addEventListener('click',e=>{
+      const tool=TOOL[svg.id];
+      const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY;
+      const loc=pt.matrixTransform(svg.getScreenCTM().inverse());
+      const obj=e.target.closest?e.target.closest('.obj-bunker,.obj-water,.obj-arbol'):null;
+      const markEl=e.target.closest?e.target.closest('.mark'):null;
+      if(svg.id==='greenField' && tool==='bandera'){ setFlag(loc.x,loc.y); saveCurrentHole(); return; }
+      if(tool==='golpe'){
+        if(markEl){ markEl.remove(); updateCounts(); saveCurrentHole(); return; }
+        placeAt(svg,loc,'golpe'); updateCounts(); saveCurrentHole(); return;
+      }
+      if(obj){ selectObj(obj); return; }
+      if(SELECTED) deselect();
+      placeAt(svg,loc,tool); updateCounts(); saveCurrentHole();
+    });
+  });
+  function updateCounts(){
+    document.getElementById('cntGreen').textContent=document.querySelectorAll('#greenField .mark').length+' marcas';
+    document.getElementById('cntFair').textContent=document.querySelectorAll('#fairField .mark').length+' marcas';
+  }
+  document.querySelectorAll('[data-clear]').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.clear==='green'?'greenField':'fairField';
+    document.querySelectorAll('#'+id+' .mark').forEach(m=>m.remove());
+    deselect(); updateCounts(); saveCurrentHole();
+  }));
+  /* superposición de todos los hoyos (dispersión) */
+  function overlaySVG(svgId,key,withMarks){
+    const clone=document.getElementById(svgId).cloneNode(true);
+    clone.querySelectorAll('.mark,.obj-bunker,.obj-water,.obj-arbol,.sel-ring').forEach(e=>e.remove());
+    clone.removeAttribute('id'); clone.setAttribute('class','pc-ovsvg'); clone.setAttribute('width','88mm'); clone.removeAttribute('height');
+    if(withMarks!==false) for(let h=1;h<=18;h++){
+      ((holeData[h]&&holeData[h][key])||[]).forEach(o=>{ if(o.k==='golpe'){
+        const t=document.createElementNS(NS,'text'); t.setAttribute('x',o.x); t.setAttribute('y',o.y+8);
+        t.setAttribute('text-anchor','middle'); t.setAttribute('font-family','Caveat,cursive'); t.setAttribute('font-weight','700');
+        t.setAttribute('font-size','22'); t.setAttribute('fill',o.c||'#C8402F'); t.setAttribute('fill-opacity','.72'); t.textContent='✕'; clone.appendChild(t);
+      }});
+    }
+    return clone.outerHTML;
+  }
+  loadRound(); trackerHole=1; document.getElementById('holeNum').textContent=1; renderHole(1); updateCounts();
+  document.getElementById('dispBtn').addEventListener('click',()=>{
+    saveCurrentHole();
+    const legend=ALL_TYPES.map(x=>`<span style="color:${x.c};font-weight:700;margin:0 6px">✕ ${x.t}</span>`).join('');
+    document.getElementById('dispBody').innerHTML='<div class="disp-legend">'+legend+'</div>'+overlaySVG('greenField','green')+overlaySVG('fairField','fair');
+    document.getElementById('dispOverlay').classList.add('show');
+  });
+  document.getElementById('dispClose').addEventListener('click',()=>document.getElementById('dispOverlay').classList.remove('show'));
+
+  /* ═══ Historial de rondas ═══ */
+  function getRoundSummary(){
+    const txt=id=>{const e=document.getElementById(id);return e?e.textContent.trim():'';};
+    const campo=(campoSel.value&&campoSel.value!==MANUAL)?campoSel.options[campoSel.selectedIndex].text:'';
+    const hoyos=(HOLES_TO-HOLES_FROM+1===9)?(HOLES_FROM===1?'9 (1º)':'9 (2º)'):'18';
+    return { ts:Date.now(), fecha:(document.getElementById('fechaInput').value||'').trim(),
+      campo, barra:barraSel.value||'', hoyos,
+      golpes:txt('stGolpes'), vspar:txt('stPar'), calles:txt('stCalles'), greens:txt('stGreens'),
+      putts:(sumRange('putts',HOLES_FROM,HOLES_TO)||''), diff:txt('whsDiff'), hj:txt('whsHJ') };
+  }
+  let history=[]; try{ history=JSON.parse(localStorage.getItem('vuelta_historial')||'[]')||[]; }catch(e){}
+  function saveHistory(){ try{localStorage.setItem('vuelta_historial',JSON.stringify(history));}catch(e){} }
+  function renderHistory(){
+    const box=document.getElementById('histBody');
+    if(!history.length){ box.innerHTML='<div class="hist-empty">Aún no hay rondas guardadas. Pulsa «Guardar ronda» al acabar.</div>'; return; }
+    const cell=(v,l)=>`<div class="hc-cell"><b>${v||'—'}</b><span>${l}</span></div>`;
+    box.innerHTML=history.slice().reverse().map(r=>
+      `<div class="hist-card"><button class="hist-del" data-ts="${r.ts}">✕</button>`+
+      `<div class="hc-top">${r.campo||'—'} ${r.barra?'· '+r.barra:''}</div>`+
+      `<div class="hc-sub">${r.fecha||'sin fecha'} · ${r.hoyos} hoyos</div>`+
+      `<div class="hc-grid">${cell(r.golpes,'Golpes')}${cell(r.vspar,'vs Par')}${cell(r.diff,'Difer.')}${cell(r.hj,'Hcp J')}${cell(r.putts,'Putts')}${cell(r.calles,'Calles')}${cell(r.greens,'Greens')}</div></div>`
+    ).join('');
+    box.querySelectorAll('.hist-del').forEach(b=>b.addEventListener('click',()=>{ const ts=+b.dataset.ts; history=history.filter(x=>x.ts!==ts); saveHistory(); renderHistory(); }));
+  }
+  document.getElementById('saveRound').addEventListener('click',()=>{
+    const b=document.getElementById('saveRound'); history.push(getRoundSummary()); saveHistory();
+    b.textContent='Guardada ✓'; setTimeout(()=>{b.textContent='Guardar ronda';},1500);
+  });
+  document.getElementById('histBtn').addEventListener('click',()=>{ renderHistory(); document.getElementById('histOverlay').classList.add('show'); });
+  document.getElementById('histClose').addEventListener('click',()=>document.getElementById('histOverlay').classList.remove('show'));
+
+
+  /* ═══ Importar campos desde JSON ═══ */
+  const BARRA_ORDER=['Blancas','Amarillas','Azules','Rojas','Negras','Naranjas','Verdes','Doradas'];
+  function slug(s){return (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'').slice(0,24) || ('c'+Date.now());}
+  function importOne(obj){
+    if(!obj||!obj.nombre||!Array.isArray(obj.hoyos)||!obj.hoyos.length)
+      throw new Error('cada campo necesita "nombre" y "hoyos" (array)');
+    const hoyos=obj.hoyos;
+    const set=new Set();
+    hoyos.forEach(h=> h && h.metros && Object.keys(h.metros).forEach(k=>set.add(k)));
+    if(obj.valoracion) Object.keys(obj.valoracion).forEach(k=>set.add(k));
+    if(!set.size) throw new Error('"'+obj.nombre+'": ningún hoyo trae metros por barra');
+    const barrasList=[...set].sort((a,b)=>{
+      const ia=BARRA_ORDER.indexOf(a), ib=BARRA_ORDER.indexOf(b);
+      return (ia<0?99:ia)-(ib<0?99:ib);
+    });
+    const par=hoyos.map(h=> h&&h.par!=null?h.par:null);
+    const hcp=hoyos.map(h=> h&&h.hcp!=null?h.hcp:null);
+    const metrosHoyos={};
+    barrasList.forEach(b=> metrosHoyos[b]=hoyos.map(h=> (h&&h.metros&&h.metros[b]!=null)?h.metros[b]:null));
+    const barras={};
+    barrasList.forEach(b=>{
+      const tot=metrosHoyos[b].reduce((a,x)=>a+(Number(x)||0),0);
+      const v=(obj.valoracion&&obj.valoracion[b])||{};
+      barras[b]={metros: v.metros!=null?v.metros:tot, cr: v.cr!=null?v.cr:null, slope: v.slope!=null?v.slope:null};
+    });
+    const key=slug(obj.nombre);
+    COURSES[key]={nombre:obj.nombre,par,hcp,metrosHoyos,barras};
+    persist(key);
+    return key;
+  }
+  const jsonMsg=document.getElementById('jsonMsg');
+  document.getElementById('jsonLoad').addEventListener('click',()=>{
+    jsonMsg.className=''; jsonMsg.textContent='';
+    let data;
+    try{ data=JSON.parse(document.getElementById('jsonIn').value); }
+    catch(e){ jsonMsg.className='err'; jsonMsg.textContent='JSON no válido'; return; }
+    const arr=Array.isArray(data)?data:[data];
+    let last=null,n=0;
+    try{ arr.forEach(o=>{ last=importOne(o); n++; }); }
+    catch(e){ jsonMsg.className='err'; jsonMsg.textContent=e.message; return; }
+    buildCampoOptions(last);
+    campoSel.dispatchEvent(new Event('change'));
+    jsonMsg.className='ok'; jsonMsg.textContent=(n===1?'1 campo cargado ✓':n+' campos cargados ✓');
+  });
+
+  /* ═══ Importar desde Excel (.xlsx) ═══ */
+  const num=v=>{ if(v===''||v==null) return null; const n=Number(v); return Number.isFinite(n)?n:null; };
+  function parseSheet(rows){
+    const hi=rows.findIndex(r=> r && r.some(c=> String(c).trim().toLowerCase()==='hoyo'));
+    if(hi<0) return null;
+    const hdr=rows[hi].map(c=> String(c==null?'':c).trim());
+    const idxHoyo=hdr.findIndex(c=>c.toLowerCase()==='hoyo');
+    const idxPar=hdr.findIndex(c=>c.toLowerCase()==='par');
+    const idxHcp=hdr.findIndex(c=>c.toLowerCase()==='hcp');
+    const barraCols=[];
+    hdr.forEach((c,ci)=>{ if(ci>idxHcp && c) barraCols.push({name:c,ci}); });
+    const campoRow=rows.find(r=> r && String(r[0]).trim().toLowerCase()==='campo');
+    const nombre=campoRow?String(campoRow[1]||'').trim():'';
+    const hoyos=[];
+    for(let r=hi+1;r<rows.length;r++){
+      const row=rows[r]; if(!row) continue;
+      const hn=Number(row[idxHoyo]);
+      if(!Number.isFinite(hn)||hn<1) continue;
+      if(hn>18) break;
+      const metros={};
+      barraCols.forEach(bc=>{ const v=num(row[bc.ci]); if(v!=null) metros[bc.name]=v; });
+      hoyos.push({par:num(row[idxPar]),hcp:num(row[idxHcp]),metros});
+    }
+    const crRow=rows.find(r=>r&&String(r[0]).trim().toLowerCase()==='cr');
+    const slRow=rows.find(r=>r&&String(r[0]).trim().toLowerCase()==='slope');
+    const val={};
+    barraCols.forEach(bc=>{
+      const cr=crRow?num(crRow[bc.ci]):null, sl=slRow?num(slRow[bc.ci]):null;
+      if(cr!=null||sl!=null) val[bc.name]={cr,slope:sl};
+    });
+    if(!nombre || !hoyos.some(h=>Object.keys(h.metros).length)) return null;
+    return {nombre, valoracion:Object.keys(val).length?val:undefined, hoyos};
+  }
+  document.getElementById('xlsxIn').addEventListener('change',ev=>{
+    const f=ev.target.files[0]; if(!f) return;
+    jsonMsg.className=''; jsonMsg.textContent='';
+    if(typeof XLSX==='undefined'){ jsonMsg.className='err'; jsonMsg.textContent='Necesita conexión para leer Excel'; return; }
+    const reader=new FileReader();
+    reader.onload=e=>{
+      let n=0,last=null;
+      try{
+        const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+        wb.SheetNames.forEach(sn=>{
+          if(/instruccion/i.test(sn)) return;
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+          let course=null; try{ course=parseSheet(rows); }catch(_){}
+          if(!course) return;
+          try{ last=importOne(course); n++; }catch(_){}
+        });
+      }catch(err){ jsonMsg.className='err'; jsonMsg.textContent='No pude leer el Excel'; ev.target.value=''; return; }
+      if(!n){ jsonMsg.className='err'; jsonMsg.textContent='No encontré campos válidos'; ev.target.value=''; return; }
+      buildCampoOptions(last); campoSel.dispatchEvent(new Event('change'));
+      jsonMsg.className='ok'; jsonMsg.textContent=n+(n===1?' campo cargado ✓':' campos cargados ✓');
+      ev.target.value='';
+    };
+    reader.readAsArrayBuffer(f);
+  });
+
+  /* ═══ Guardar campo en modo Manual ═══ */
+  document.getElementById('manualGuardar').addEventListener('click',()=>{
+    const msg=document.getElementById('manualMsg'); msg.className=''; msg.textContent='';
+    const nombre=(document.getElementById('manualNombre').value||'').trim();
+    if(!nombre){ msg.className='err'; msg.textContent='Pon un nombre'; return; }
+    const getCol=f=>{ const a=[]; document.querySelectorAll('#rows tr[data-hole]').forEach(tr=>{
+      const v=tr.querySelector(`[data-f="${f}"]`).value.trim(); a.push(v===''?null:Number(v)); }); return a; };
+    const par=getCol('par'), hcp=getCol('hcp'), metros=getCol('metros');
+    if(!metros.some(x=>x!=null)){ msg.className='err'; msg.textContent='Rellena algún metro'; return; }
+    const tot=metros.reduce((a,x)=>a+(Number(x)||0),0);
+    const key=slug(nombre);
+    COURSES[key]={nombre,par,hcp,metrosHoyos:{Metros:metros},barras:{Metros:{metros:tot,cr:null,slope:null}}};
+    persist(key);
+    document.getElementById('manualNombre').value='';
+    buildCampoOptions(key);
+    campoSel.dispatchEvent(new Event('change'));
+    msg.className='ok'; msg.textContent='Guardado ✓';
+  });
+
+  /* ═══ Versión imprimible (tarjeta doblada) ═══ */
+  function pcSum(rowsData,field,a,b){ let t=0,any=false; for(let i=a;i<=b;i++){ const v=parseFloat(rowsData[i-1][field]); if(!isNaN(v)){t+=v;any=true;} } return any?t:''; }
+  function buildPrintCard(mode){
+    const full = mode!=='limpio';
+    saveCurrentHole();
+    const rowsData=[];
+    document.querySelectorAll('#rows tr[data-hole]').forEach(tr=>{
+      const g=f=>tr.querySelector(`[data-f="${f}"]`).value.trim();
+      const on=t=>{ const e=tr.querySelector('.tick[data-t="'+t+'"]'); return e&&e.classList.contains('on'); };
+      rowsData.push({par:g('par'),mts:g('metros'),hcp:g('hcp'),calle:on('calle')?'✓':'',green:on('green')?'✓':'',putts:g('putts'),golpes:g('golpes')});
+    });
+    const campo=(campoSel.value&&campoSel.value!==MANUAL)?campoSel.options[campoSel.selectedIndex].text:'';
+    const barra=barraSel.value||'';
+    const fecha=(document.getElementById('fechaInput').value||'').trim();
+    const hcp=(document.getElementById('whsHcp').value||'').trim();
+    const rowH=(a,b)=>{ let s=''; for(let i=a;i<=b;i++){ const d=rowsData[i-1];
+      const ex=full?`<td>${d.calle}</td><td>${d.green}</td><td>${d.putts||''}</td><td>${d.golpes||''}</td>`
+                   :'<td class="pc-fill"></td><td class="pc-fill"></td><td class="pc-fill"></td><td class="pc-fill"></td>';
+      s+=`<tr><td>${i}</td><td>${d.par||''}</td><td>${d.mts||''}</td><td>${d.hcp||''}</td>`+ex+'</tr>'; } return s; };
+    const rowS=(lab,a,b)=>{ const ex=full?`<td></td><td></td><td>${pcSum(rowsData,'putts',a,b)}</td><td>${pcSum(rowsData,'golpes',a,b)}</td>`:'<td></td><td></td><td></td><td></td>';
+      return `<tr class="pc-sum"><td>${lab}</td><td>${pcSum(rowsData,'par',a,b)}</td><td>${pcSum(rowsData,'mts',a,b)}</td><td></td>`+ex+'</tr>'; };
+    let body;
+    if(HOLES_FROM===1&&HOLES_TO===18) body=rowH(1,9)+rowS('Ida',1,9)+rowH(10,18)+rowS('Vuelta',10,18)+rowS('Total',1,18);
+    else body=rowH(HOLES_FROM,HOLES_TO)+rowS(HOLES_FROM===1?'Ida':'Vuelta',HOLES_FROM,HOLES_TO);
+    const head='<tr><th>H</th><th>Par</th><th>Mts</th><th>Hcp</th><th>Calle</th><th>Green</th><th>Putts</th><th>Golpes</th></tr>';
+    const legend=ALL_TYPES.map(x=>`<span style="color:${x.c};font-weight:700;margin:0 5px">✕ ${x.t}</span>`).join('');
+    const t2=full?'Dispersión · todos los hoyos':'Seguimiento (en blanco)';
+    const note=full?`${legend}<br>✕ = cada golpe registrado, superpuesto de los 18 hoyos (dispersión).`:'Marca a mano dónde cae cada golpe y luego pásalo a la app.';
+    const face2=`<div class="pc-face2"><div class="pc-title">${t2}</div>`+
+      `<div class="pc-meta">${campo||''} ${barra?'· '+barra:''} ${fecha?'· '+fecha:''}</div>`+
+      `<div class="pc-diag-big">${overlaySVG('greenField','green',full)}${overlaySVG('fairField','fair',full)}</div>`+
+      `<div class="pc-note">${note}</div></div>`;
+    document.getElementById('printCard').innerHTML=
+      `<div class="pc-face"><div class="pc-head"><div class="pc-title">Vuelta · Tarjeta</div>`+
+      `<div class="pc-meta">Campo: ${campo||'____________'} &nbsp;·&nbsp; Barra: ${barra||'______'}<br>`+
+      `Fecha: ${fecha||'________'} &nbsp;·&nbsp; Jugador: ____________ &nbsp;·&nbsp; Hcp: ${hcp||'____'}</div></div>`+
+      `<table class="pc-table"><thead>${head}</thead><tbody>${body}</tbody></table></div>`+face2;
+  }
+  function standalonePrintHTML(){
+    const css=`<style>
+      :root{--sand:#E4D2A8;--flag:#C8402F;--turf:#14432E;--fairway:#2E6B49}
+      body{margin:0;padding:10mm;font-family:Arial,Helvetica,sans-serif;color:#000}
+      .printcard{width:90mm;max-width:100%;margin:0 auto}
+      .pc-head{margin-bottom:4mm}.pc-title{font-weight:700;font-size:13pt}
+      .pc-meta{font-size:8.5pt;line-height:1.6}
+      .pc-table{width:100%;border-collapse:collapse;font-size:8.5pt}
+      .pc-table th,.pc-table td{border:.5pt solid #000;text-align:center;height:6mm;padding:0 .5mm}
+      .pc-table th{background:#eee;font-size:7.5pt}.pc-sum td{font-weight:700;background:#f4f4f4}
+      .pc-face2{margin-top:8mm;text-align:center}
+      .pc-diag-big{display:flex;flex-direction:column;gap:6mm;align-items:center;margin-top:4mm}
+      .pc-diag-big svg,.pc-ovsvg{border:.5pt solid #999;border-radius:2mm;max-width:100%}
+      .pc-note{font-size:8pt;color:#555;margin-top:3mm;text-align:center}
+      @media print{ @page{margin:8mm}
+        .pc-face2{break-before:page;page-break-before:always;margin-top:0} }
+    </style>`;
+    return `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">`+
+      `<meta name="viewport" content="width=device-width, initial-scale=1"><title>Tarjeta · Vuelta</title>`+
+      css+`</head><body><div class="printcard">${document.getElementById('printCard').innerHTML}</div></body></html>`;
+  }
+  let printMode='relleno';
+  function refreshPrint(){ buildPrintCard(printMode); }
+  document.getElementById('printBtn').addEventListener('click',()=>{ refreshPrint(); document.getElementById('printOverlay').classList.add('show'); });
+  document.getElementById('pmClean').addEventListener('click',()=>{ printMode='limpio';
+    document.getElementById('pmClean').classList.add('on'); document.getElementById('pmFull').classList.remove('on'); refreshPrint(); });
+  document.getElementById('pmFull').addEventListener('click',()=>{ printMode='relleno';
+    document.getElementById('pmFull').classList.add('on'); document.getElementById('pmClean').classList.remove('on'); refreshPrint(); });
+  document.getElementById('printDo').addEventListener('click',()=>{
+    buildPrintCard(printMode);
+    const blob=new Blob([standalonePrintHTML()],{type:'text/html'});
+    const url=URL.createObjectURL(blob);
+    const w=window.open(url,'_blank');
+    if(!w){ const a=document.createElement('a'); a.href=url; a.target='_blank'; a.rel='noopener';
+      document.body.appendChild(a); a.click(); a.remove(); }
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  });
+  document.getElementById('printClose').addEventListener('click',()=>{ document.getElementById('printOverlay').classList.remove('show'); });
+
+  recompute();
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){ window.addEventListener('load',function(){ navigator.serviceWorker.register('./sw.js').catch(function(){}); }); }
+</script>
+</body>
+</html>
