@@ -244,6 +244,11 @@
   .hist-del{position:absolute;top:8px;right:8px;border:none;background:transparent;color:var(--pencil);font-size:18px;cursor:pointer}
   .hist-del:hover{color:var(--flag)}
   .hist-empty{text-align:center;color:var(--pencil);font-family:"Barlow Semi Condensed",sans-serif;padding:30px 0}
+  .hist-tools{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;max-width:560px;margin:0 auto 14px}
+  .hist-tools>span{font-family:"Barlow Semi Condensed",sans-serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--pencil)}
+  #exportBtn,.imp-lbl{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
+    letter-spacing:.06em;font-size:11px;background:var(--sage);color:var(--turf);border:none;border-radius:20px;padding:8px 14px;cursor:pointer}
+  #exportBtn:hover,.imp-lbl:hover{background:#DCE5D6}
   .print-toolbar{display:flex;gap:10px;justify-content:center;margin-bottom:14px}
   .print-toolbar button{font-family:"Barlow Semi Condensed",sans-serif;font-weight:700;text-transform:uppercase;
     letter-spacing:.08em;font-size:13px;border:none;border-radius:22px;padding:10px 20px;cursor:pointer}
@@ -482,6 +487,12 @@
   <div class="disp-bar">
     <span class="disp-title">Historial de rondas</span>
     <button id="histClose">Cerrar</button>
+  </div>
+  <div class="hist-tools">
+    <span>Copia de seguridad:</span>
+    <button id="exportBtn">Exportar</button>
+    <label class="imp-lbl" for="importFile">Importar</label>
+    <input id="importFile" type="file" accept=".json,application/json" hidden>
   </div>
   <div id="histBody" class="hist-body"></div>
 </div>
@@ -1276,6 +1287,26 @@
   });
   document.getElementById('histBtn').addEventListener('click',()=>{ renderHistory(); document.getElementById('histOverlay').classList.add('show'); });
   document.getElementById('histClose').addEventListener('click',()=>document.getElementById('histOverlay').classList.remove('show'));
+  document.getElementById('exportBtn').addEventListener('click',()=>{
+    const data={};
+    for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k&&k.indexOf('vuelta')===0) data[k]=localStorage.getItem(k); }
+    const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a'); a.href=url;
+    a.download='vuelta-copia-'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000);
+  });
+  document.getElementById('importFile').addEventListener('change',ev=>{
+    const f=ev.target.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=e=>{ try{ const data=JSON.parse(e.target.result);
+      Object.keys(data).forEach(k=>{ if(k.indexOf('vuelta')===0) localStorage.setItem(k,data[k]); });
+      const b=document.querySelector('.imp-lbl'); if(b) b.textContent='Importado ✓';
+      setTimeout(()=>location.reload(),700);
+    }catch(err){ const b=document.querySelector('.imp-lbl'); if(b) b.textContent='Archivo no válido'; }
+    };
+    r.readAsText(f); ev.target.value='';
+  });
 
 
   /* ═══ Importar campos desde JSON ═══ */
